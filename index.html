@@ -4,54 +4,60 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>AR.js Demo (Fixed)</title>
+<title>AR.js Debug Demo</title>
 
-<!-- A-Frame 固定版 -->
-https://aframe.io/releases/1.5.0/aframe.min.js</script>
-<!-- AR.js for A-Frame 固定版（jsDelivrでタグ固定） -->
-https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js</script>
+<!-- A-Frame（安定寄り） -->
+https://aframe.io/releases/1.4.2/aframe.min.js</script>
+<!-- AR.js for A-Frame（固定タグ） -->
+<script/cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js</script>
 
 <style>
   body { margin:0; overflow:hidden; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
-  .arjs-loader {
-    position: fixed; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    background:#fff; z-index:9999;
-  }
-  .arjs-loader div { font-size:16px; color:#333; }
-  /* デバッグ用の生映像プレビューを隠す（必要なら表示切替） */
+  .loader { position: fixed; inset:0; display:flex; align-items:center; justify-content:center;
+            background:#fff; z-index:9999; flex-direction:column; }
+  .loader p { margin:4px; color:#333; }
   #preview { position:fixed; left:-9999px; top:-9999px; width:1px; height:1px; }
-  #togglePreview { position:fixed; right:8px; bottom:8px; z-index:10000;
-    padding:8px 10px; background:#444; color:#fff; border:none; border-radius:8px; font-size:12px;}
+  #panel { position:fixed; left:8px; bottom:8px; z-index:10000; display:flex; gap:8px; }
+  button { padding:8px 10px; background:#444; color:#fff; border:none; border-radius:8px; font-size:12px; }
+  #log { position:fixed; left:8px; top:8px; right:8px; z-index:10000;
+         background:rgba(0,0,0,.6); color:#fff; padding:8px; font-size:12px;
+         max-height:40vh; overflow:auto; border-radius:8px; }
 </style>
 </head>
 
 <body>
-<div class="arjs-loader"><div>カメラ起動しました。AR初期化中…</div></div>
-<button id="togglePreview" aria-label="toggle preview">映像確認</button>
+<div class="loader" id="loader">
+  <p id="status">カメラ初期化中…</p>
+  <p id="detail">AR.jsの初期化待ち</p>
+</div>
+
+<div id="panel">
+  <button id="togglePreview">映像確認</button>
+  <button id="toggleTexture">videoTexture: ON</button>
+</div>
+<div id="log">ログ:</div>
+
 <video id="preview" autoplay muted playsinline></video>
 
-<a-scene
-  embedded
-  renderer="logarithmicDepthBuffer: true; colorManagement: true; alpha: true;"
-  vr-mode-ui="enabled: false"
-  arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;
-        videoTexture: true;
-        cameraParametersUrl: https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat;">
-  <!-- 矢印 -->
+<!-- 初期は videoTexture: true（ボタンで切替可能） -->
+<a-scene embedded
+         renderer="logarithmicDepthBuffer: true; colorManagement: true; alpha: true;"
+         vr-mode-ui="enabled: false"
+         arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;
+               videoTexture: true;
+               cameraParametersUrl: https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat;">
+
   <a-marker type="pattern" url="arrow.patt" emitevents="true" smooth="true"
             smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
     <a-cylinder position="0 0.10 0" radius="0.03" height="0.30" color="#ff2d2d"></a-cylinder>
     <a-cone position="0 0.35 0" radius-bottom="0.10" radius-top="0" height="0.25" color="#ff2d2d"></a-cone>
   </a-marker>
 
-  <!-- 立方体 -->
   <a-marker type="pattern" url="cube.patt" emitevents="true" smooth="true"
             smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
     <a-box color="#1e88e5" position="0 0.20 0" width="0.28" height="0.28" depth="0.28"></a-box>
   </a-marker>
 
-  <!-- 警告 -->
   <a-marker type="pattern" url="warning.patt" emitevents="true" smooth="true"
             smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
     <a-sphere color="#ffd54f" position="0 0.20 0" radius="0.14"></a-sphere>
@@ -62,43 +68,70 @@ https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js</scr
 </a-scene>
 
 <script>
-  // --- 生のカメラプレビュー（デバッグ用）
-  const preview = document.getElementById('preview');
-  const toggleBtn = document.getElementById('togglePreview');
-  toggleBtn.addEventListener('click', () => {
+  const $ = s => document.querySelector(s);
+  const log = (...a) => { console.log(...a); const el = $('#log'); el.textContent += '\n' + a.join(' '); el.scrollTop = el.scrollHeight; };
+  const setStatus = (s, d) => { $('#status').textContent = s; $('#detail').textContent = d || ''; };
+
+  // 生映像プレビュー
+  (async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      $('#preview').srcObject = stream;
+      await $('#preview').play();
+      log('preview: play OK');
+    } catch(e){ log('preview failed:', e?.name, e?.message); }
+  })();
+
+  // ローダーを消すトリガー（複数イベントで保険）
+  const sceneEl = document.querySelector('a-scene');
+  sceneEl.addEventListener('arReady', () => { log('event: arReady'); $('#loader').style.display = 'none'; });
+  sceneEl.addEventListener('loaded',  () => { log('event: loaded'); });
+  sceneEl.addEventListener('renderstart', () => { log('event: renderstart'); $('#loader').style.display = 'none'; });
+
+  // マーカー検出ログ
+  document.querySelectorAll('a-marker').forEach(m => {
+    m.addEventListener('markerFound', () => log('markerFound:', m.getAttribute('url')));
+    m.addEventListener('markerLost',  () => log('markerLost:',  m.getAttribute('url')));
+  });
+
+  // videoTexture 切替
+  const toggleTextureBtn = $('#toggleTexture');
+  toggleTextureBtn.addEventListener('click', () => {
+    const current = sceneEl.getAttribute('arjs');
+    const useFalse = current.includes('videoTexture: true');
+    const replaced = current.replace(/videoTexture:\s*(true|false)/, `videoTexture: ${useFalse ? 'false' : 'true'}`);
+    sceneEl.setAttribute('arjs', replaced);
+    toggleTextureBtn.textContent = `videoTexture: ${useFalse ? 'OFF' : 'ON'}`;
+    log('toggle videoTexture:', useFalse ? 'OFF' : 'ON');
+  });
+
+  // プレビュー表示切替
+  const preview = $('#preview');
+  $('#togglePreview').addEventListener('click', () => {
     const hidden = preview.style.left === '-9999px';
     if (hidden) {
       preview.style.left = '8px'; preview.style.top = '8px';
       preview.style.width = '240px'; preview.style.height = '135px';
-      toggleBtn.textContent = 'プレビュー非表示';
+      $('#togglePreview').textContent = 'プレビュー非表示';
     } else {
       preview.style.left = '-9999px'; preview.style.top = '-9999px';
       preview.style.width = '1px'; preview.style.height = '1px';
-      toggleBtn.textContent = '映像確認';
+      $('#togglePreview').textContent = '映像確認';
     }
   });
 
-  // ページ読み込み後に生映像を先に起動（iOS対策は許可済みならOK）
+  // camera_para.dat のフェッチ検査（ネットワーク確認用）
   (async () => {
+    const url = 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat';
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      preview.srcObject = stream;
-      await preview.play();
-    } catch(e) { console.warn('preview failed:', e?.name, e?.message); }
+      const res = await fetch(url, { cache: 'no-store' });
+      log('camera_para.dat:', res.ok ? 'OK' : `NG status=${res.status}`);
+      if (res.ok) setStatus('AR初期化中…', 'パラメータ取得OK');
+    } catch (e) {
+      log('camera_para.dat fetch error:', e?.name, e?.message);
+      setStatus('初期化中（ネットワーク待ち）', 'パラメータ取得エラー');
+    }
   })();
-
-  // --- AR初期化完了でローダーを消す
-  const sceneEl = document.querySelector('a-scene');
-  sceneEl.addEventListener('arReady', () => {
-    document.querySelector('.arjs-loader').style.display = 'none';
-    console.log('AR.js ready');
-  });
-
-  // --- 参考ログ（マーカー検出）
-  document.querySelectorAll('a-marker').forEach(m => {
-    m.addEventListener('markerFound', () => console.log('markerFound:', m.getAttribute('url')));
-    m.addEventListener('markerLost',  () => console.log('markerLost:',  m.getAttribute('url')));
-  });
 </script>
 </body>
 </html>
