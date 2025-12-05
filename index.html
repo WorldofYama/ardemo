@@ -2,113 +2,63 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>AR.js Demo</title>
 
-  <!-- A-Frame -->
-  <script/aframe.io/releases/1.5.0/aframe.min.js</script>
-  <!-- AR.js for A-Frame（marker-based） -->
-  https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js</script>
+<!-- A-Frame -->
+https://aframe.io/releases/1.5.0/aframe.min.js
+<!-- AR.js for A-Frame -->
+https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js</script>
 
-  <style>
-    body { margin:0; overflow:hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
-    .arjs-loader { position: fixed; top:0; left:0; width:100%; height:100%;
-      display:flex; align-items:center; justify-content:center; z-index:9999; background:white; }
-    .arjs-loader div { font-size: 16px; color:#333; }
-    #ui { position:fixed; left:0; right:0; bottom:0; padding:12px; display:flex; gap:8px; justify-content:center; z-index:10000; }
-    #startBtn { padding:10px 16px; border:none; background:#1e88e5; color:#fff; font-weight:600; border-radius:8px; }
-    #msg { color:#333; font-size:14px; }
-    video#preview { position:fixed; left:-9999px; top:-9999px; } /* デバッグ用のプレビューは画面外 */
-  </style>
+<style>
+  body { margin:0; overflow:hidden; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+  .arjs-loader {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    background:white; z-index:9999;
+  }
+  .arjs-loader div { font-size:16px; color:#333; }
+</style>
 </head>
 
 <body>
-  <!-- ローディング -->
-  <div class="arjs-loader"><div>カメラ初期化待ち（「カメラ開始」を押してください）</div></div>
+<div class="arjs-loader"><div>カメラ初期化中…</div></div>
 
-  <!-- ユーザー操作UI -->
-  <div id="ui">
-    <button id="startBtn">カメラ開始</button>
-    <span id="msg"></span>
-  </div>
+<a-scene embedded
+         vr-mode-ui="enabled: false"
+         renderer="logarithmicDepthBuffer: true; colorManagement: true;"
+         arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;
+               cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;">
 
-  <!-- iOSでの再生要件（playsinline + muted）を満たすための隠しプレビュー -->
-  <video id="preview" autoplay muted playsinline></video>
+  <!-- 矢印マーカー -->
+  <a-marker type="pattern" url="arrow.patt" emitevents="true" smooth="true"
+            smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
+    <a-cylinder position="0 0.10 0" radius="0.03" height="0.30" color="#ff2d2d"></a-cylinder>
+    <a-cone position="0 0.35 0" radius-bottom="0.10" radius-top="0" height="0.25" color="#ff2d2d"></a-cone>
+  </a-marker>
 
-  <!-- ここに AR シーンを後から挿入します -->
-  <div id="sceneMount"></div>
+  <!-- 立方体マーカー -->
+  <a-marker type="pattern" url="cube.patt" emitevents="true" smooth="true"
+            smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
+    <a-box color="#1e88e5" position="0 0.20 0" width="0.28" height="0.28" depth="0.28"></a-box>
+  </a-marker>
 
-  <script>
-    const startBtn = document.getElementById('startBtn');
-    const preview = document.getElementById('preview');
-    const loader = document.querySelector('.arjs-loader');
-    const msg = document.getElementById('msg');
-    const sceneMount = document.getElementById('sceneMount');
+  <!-- 警告マーカー -->
+  <a-marker type="pattern" url="warning.patt" emitevents="true" smooth="true"
+            smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
+    <a-sphere color="#ffd54f" position="0 0.20 0" radius="0.14"></a-sphere>
+    <a-text value="!" color="#111" position="0 0.36 0" align="center" side="double" scale="2 2 2"></a-text>
+  </a-marker>
 
-    // クリック（＝ユーザー操作）で権限要求 → ストリーム取得
-    startBtn.addEventListener('click', async () => {
-      msg.textContent = '権限を要求しています…';
-      try {
-        // iOS Edge/Safariでも通りやすい最小構成。後で facingMode を付けることは可能
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,   // 必要なら { facingMode: { ideal: 'environment' } } に変更
-          audio: false
-        });
-        // iOSの自動再生制約回避：playsinline + muted + 明示的再生
-        preview.srcObject = stream;
-        await preview.play();
+  <a-entity camera></a-entity>
+</a-scene>
 
-        // 権限が通ったので AR.js シーンを生成して初期化
-        initARScene();
-
-        loader.style.display = 'none';
-        msg.textContent = 'カメラ起動しました。マーカーにかざしてください。';
-
-      } catch (err) {
-        console.error(err);
-        msg.textContent = (err && err.name) ? `エラー: ${err.name}` : 'カメラ起動に失敗しました';
-        // iOS/HTTPS/権限に関する典型的エラー: NotAllowedError / NotFoundError / SecurityError など
-      }
-    });
-
-    function initARScene() {
-      sceneMount.innerHTML = `
-        <a-scene
-          embedded
-          renderer="logarithmicDepthBuffer: true; colorManagement: true;"
-          vr-mode-ui="enabled: false"
-          arjs="
-            sourceType: webcam;
-            debugUIEnabled: false;
-            trackingMethod: best;
-            cameraParametersUrl: https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
-            videoTexture: true;
-          "
-        >
-          <!-- 矢印 -->
-          <a-marker type="pattern" url="arrow.patt" emitevents="true" smooth="true"
-                    smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-            <a-cylinder position="0 0.10 0" radius="0.03" height="0.30" color="#ff2d2d"></a-cylinder>
-            <a-cone     position="0 0.35 0" radius-bottom="0.10" radius-top="0" height="0.25" color="#ff2d2d"></a-cone>
-          </a-marker>
-
-          <!-- 立方体 -->
-          <a-marker type="pattern" url="cube.patt" emitevents="true" smooth="true"
-                    smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-            <a-box color="#1e88e5" position="0 0.20 0" width="0.28" height="0.28" depth="0.28"></a-box>
-          </a-marker>
-
-          <!-- 警告 -->
-          <a-marker type="pattern" url="warning.patt" emitevents="true" smooth="true"
-                    smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-            <a-sphere color="#ffd54f" position="0 0.20 0" radius="0.14"></a-sphere>
-            <a-text value="!" color="#111" position="0 0.36 0" align="center" side="double" scale="2 2 2"></a-text>
-          </a-marker>
-
-          <a-entity camera></a-entity>
-        </a-scene>
-      `;
-    }
-  </script>
+<script>
+  // ローディング非表示
+  document.querySelector('a-scene').addEventListener('loaded', () => {
+    document.querySelector('.arjs-loader').style.display = 'none';
+  });
+</script>
 </body>
 </html>
