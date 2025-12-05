@@ -1,46 +1,19 @@
 
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AR.js Hiro Test</title>
-
-<!-- A-Frame（1.4.2） -->
-https://aframe.io/releases/1.4.2/aframe.min.js</script>
-<!-- AR.js（固定タグ 3.3.2） -->
-https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js</script>
-
-<style>
-  body { margin:0; overflow:hidden; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
-  .loader { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-            background:#fff; z-index:9999; }
-</style>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera sanity check</title>
+<style>video{width:100vw;height:100vh;object-fit:cover;background:#000}</style>
 </head>
 <body>
-<div class="loader" id="loader">カメラ初期化中…</div>
-
-<a-scene
-  embedded
-  renderer="colorManagement: true; alpha: false;"  <!-- まず不透明で描画（背景が黒→映像の白抜けを回避） -->
-  vr-mode-ui="enabled: false"
-  arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;
-        videoTexture: true;
-        cameraParametersUrl: https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat;">
-
-  <!-- 既製の Hiro マーカー（.patt不要） -->
-  <a-marker preset="hiro" emitevents="true" smooth="true"
-            smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-    <a-box position="0 0.20 0" width="0.28" height="0.28" depth="0.28" color="#4caf50"></a-box>
-  </a-marker>
-
-  <a-entity camera></a-entity>
-</a-scene>
-
+<video id="v" autoplay muted playsinline></video>
 <script>
-  const sceneEl = document.querySelector('a-scene');
-  sceneEl.addEventListener('arReady', () => document.getElementById('loader').style.display = 'none');
-  sceneEl.addEventListener('renderstart', () => document.getElementById('loader').style.display = 'none');
+(async()=>{
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    const v=document.getElementById('v'); v.srcObject=s; await v.play();
+  }catch(e){ alert('Camera failed: '+(e.name||e)); }
+})();
 </script>
 </body>
 </html>
