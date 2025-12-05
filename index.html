@@ -1,19 +1,70 @@
 
 <!DOCTYPE html>
 <html lang="ja">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Camera sanity check</title>
-<style>video{width:100vw;height:100vh;object-fit:cover;background:#000}</style>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AR.js (three.js) Hiro Minimal</title>
+<style>body{margin:0;overflow:hidden}</style>
+<!-- three.js -->
+<script/cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js</script>
+<!-- AR.js (three.js build) 固定タグ -->
+<script src="https://cdn.jsdelivr.net/gh/AR@3.3.2/three.js/build/ar.js</script>
 </head>
 <body>
-<video id="v" autoplay muted playsinline></video>
 <script>
-(async()=>{
-  try{
-    const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-    const v=document.getElementById('v'); v.srcObject=s; await v.play();
-  }catch(e){ alert('Camera failed: '+(e.name||e)); }
-})();
+  // 基本の three.js セットアップ
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.Camera();
+  scene.add(camera);
+
+  // 背景を黒にすると白板に見えなくなる
+  renderer.setClearColor(0x000000, 1);
+
+  // ARToolkitSource: カメラ取得
+  const source = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+  source.init(()=>onResize());
+  window.addEventListener('resize', onResize);
+  function onResize(){ source.onResizeElement(); source.copyElementSizeTo(renderer.domElement); if (artoolkit) artoolkit.arController?.resize(renderer.domElement.width, renderer.domElement.height); }
+
+  // ARToolkitContext: カメラパラメータ
+  const artoolkit = new THREEx.ArToolkitContext({
+    cameraParametersUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat',
+    detectionMode: 'mono'
+  });
+  artoolkit.init(()=>{
+    camera.projectionMatrix.copy(artoolkit.getProjectionMatrix());
+    console.log('ARToolkit context ready');
+  });
+
+  // Hiro マーカー（プリセット）
+  const markerControls = new THREEx.ArMarkerControls(artoolkit, camera, {
+    type: 'pattern',
+    patternUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt',
+    changeMatrixMode: 'cameraTransformMatrix'
+  });
+
+  // 3Dオブジェクト
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(1,1,1),
+    new THREE.MeshNormalMaterial()
+  );
+  box.position.y = 0.5; // 底面がマーカー中心に乗るように
+  scene.add(box);
+
+  // ループ
+  const clock = new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    if(source.ready === true){
+      artoolkit.update(source.domElement);
+      box.rotation.y += clock.getDelta(); // 回転させて見えやすく
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
 </script>
 </body>
 </html>
