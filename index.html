@@ -1,29 +1,44 @@
 
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AR.js (three.js) Hiro Minimal – CDN switched</title>
-<style>body{margin:0;overflow:hidden}</style>
-<!-- three.js -->
-https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js</script>
-<!-- AR.js (three.js build) 固定タグ -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AR.js (three.js) Hiro Minimal – CDN switched & errors</title>
+<style>
+  html,body{height:100%} body{margin:0; overflow:hidden; background:#000; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+  #error{position:fixed; left:8px; top:8px; right:8px; z-index:10000; color:#fff; background:rgba(200,0,0,.55); padding:8px; border-radius:8px; display:none; white-space:pre-wrap;}
+</style>
+
+<!-- three.js（unpkg に切り替え・CORS対応） -->
+https://unpkg.com/three@0.150.1/build/three.min.js</script>
+<!-- AR.js（three.js build 固定タグ） -->
 https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/three.js/build/ar.js</script>
 </head>
 <body>
+<div id="error"></div>
 <script>
-  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+(function(){
+  const showErr = (msg) => { const e = document.getElementById('error'); e.style.display='block'; e.textContent = 'エラー: ' + msg; console.error(msg); };
+
+  // ライブラリ存在チェック
+  if (!window.THREE) { showErr('three.min.js が読み込めていません（CDNブロック/ネットワーク不通/タグ崩れの可能性）。'); return; }
+  if (!window.THREEx || !THREEx.ArToolkitContext) { showErr('AR.js (three.js build) が読み込めていません。'); return; }
+
+  // three.js 基本セットアップ
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false}); // 背景黒にして白画面に見えないように
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x000000, 1);
   document.body.appendChild(renderer.domElement);
+
   const scene = new THREE.Scene();
   const camera = new THREE.Camera();
   scene.add(camera);
-  renderer.setClearColor(0x000000, 1);
 
-  // Webcam
+  // カメラソース
   const source = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
-  source.init(()=>onResize());
+  source.init(() => onResize());
   window.addEventListener('resize', onResize);
   function onResize(){
     source.onResizeElement();
@@ -33,39 +48,49 @@ https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/three.js/build/ar.js</script>
     }
   }
 
-  // ← ここがCDN変更ポイント（camera_para.dat）
+  // camera_para.dat を GitHack に切替（RawGitHubの安定鏡）
   const artoolkit = new THREEx.ArToolkitContext({
     cameraParametersUrl: 'https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat',
     detectionMode: 'mono'
   });
-  artoolkit.init(()=>{
+
+  // パラメータ取得の事前チェック（ネットワーク/CORSの切り分け）
+  fetch('https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat', {cache:'no-store'})
+    .then(r => { if (!r.ok) throw new Error('camera_para.dat を取得できませんでした：status ' + r.status); })
+    .catch(err => { showErr('camera_para.dat 取得失敗：' + err.message); });
+
+  artoolkit.init(() => {
     camera.projectionMatrix.copy(artoolkit.getProjectionMatrix());
     console.log('ARToolkit context ready');
   });
 
-  // ← ここがCDN変更ポイント（hiro.patt）
+  // Hiro .patt を GitHack に切替
   const markerControls = new THREEx.ArMarkerControls(artoolkit, camera, {
     type: 'pattern',
     patternUrl: 'https://raw.githack.com/AR-js-org/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt',
     changeMatrixMode: 'cameraTransformMatrix'
   });
 
+  // 3Dオブジェクト（目立つように回転）
   const box = new THREE.Mesh(
     new THREE.BoxGeometry(1,1,1),
     new THREE.MeshNormalMaterial()
   );
-  box.position.y = 0.5;
+  box.position.y = 0.5; // 底面がマーカー面に乗る高さ
   scene.add(box);
 
   const clock = new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);
-    if(source.ready){
-      artoolkit.update(source.domElement);
+    if (source.ready === true) {
+      try { artoolkit.update(source.domElement); }
+      catch(err){ showErr('artoolkit.update で例外: ' + err.message); }
       box.rotation.y += clock.getDelta();
     }
     renderer.render(scene, camera);
   }
   animate();
+})();
 </script>
 </body>
+</html>
