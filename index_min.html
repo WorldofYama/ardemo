@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>AR.js Minimal</title>
+  <title>AR.js Minimal (Fixed)</title>
 
   <!-- A-Frame -->
   https://aframe.io/releases/1.5.0/aframe.min.js</script>
@@ -13,25 +13,26 @@
 
   <style>
     html, body { margin:0; height:100%; background:#000; }
-    /* 念のため、キャンバス透過を強制（白塗り対策） */
-    a-scene canvas { background: transparent !important; }
+    /* ★ 透明化はしない（videoTexture:true では canvas 内に映像が描かれる） */
+    /* a-scene canvas { background: transparent !important; } ← 削除 */
   </style>
 </head>
 <body>
   <a-scene
     embedded
     vr-mode-ui="enabled: false"
-    renderer="alpha: true; colorManagement: true;"
+    renderer="colorManagement: true;"
     arjs="sourceType: webcam; debugUIEnabled: true; videoTexture: true;
           trackingMethod: best;
           cameraParametersUrl: https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat;">
-
-    <!-- まず Hiro で試すと切り分けが速い -->
-    <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/images/patterns/hiro.patt">
+    
+    <!-- Hiro（まずこれで確認） -->
+    <a-marker type="pattern"
+              url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/images/patterns/hiro.patt">
       <a-box position="0 0.25 0" depth="0.5" height="0.5" width="0.5" color="#1e88e5"></a-box>
     </a-marker>
 
-    <!-- あなたの .patt も並行で試す -->
+    <!-- あなたの .patt も併記 -->
     <a-marker type="pattern" url="patt/arrow.patt">
       <a-cylinder position="0 0.10 0" radius="0.03" height="0.30" color="#ff2d2d"></a-cylinder>
       <a-cone position="0 0.35 0" radius-bottom="0.10" radius-top="0" height="0.25" color="#ff2d2d"></a-cone>
@@ -39,5 +40,14 @@
 
     <a-entity camera></a-entity>
   </a-scene>
+
+  <script>
+    const sceneEl = document.querySelector('a-scene');
+    sceneEl.addEventListener('arReady', () => console.log('[AR.js] ready'));
+    sceneEl.addEventListener('renderstart', () => console.log('[A-Frame] render start'));
+    window.addEventListener('error', (e) => {
+      console.error('[Error]', e.message, e.filename, e.lineno);
+    });
+  </script>
 </body>
 </html>
