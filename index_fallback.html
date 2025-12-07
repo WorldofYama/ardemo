@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>AR.js Demo (Tap-to-Start)</title>
+
+  <script src="https://afses/1.5.0/aframe.min.js</script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js" defer crossoriginmargin:0; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial; background:#000; }
+    #bgvideo { position:fixed; inset:0; object-fit:cover; z-index:0; background:#000; }
+    .overlay { position:fixed; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; }
+    .btn { background:#1e88e5; color:#fff; border:none; border-radius:8px; padding:12px 20px; font-size:16px; }
+  </style>
+</head>
+<body>
+  <!-- 背景に素の video を表示 -->
+  <video id="bgvideo" autoplay muted playsinline></video>
+
+  <!-- ユーザー操作で開始（iOS/Edge対策） -->
+  <div class="overlay" id="overlay">
+    <button class="btn" id="startBtn">カメラを開始（タップ）</button>
+  </div>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true; colorManagement: true;"
+    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; videoTexture: false;
+          cameraParametersUrl: https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat;">
+    <a-marker type="pattern" url="patt/arrow.patt" emitevents="true" smooth="true"
+              smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
+      <a-cylinder position="0 0.10 0" radius="0.03" height="0.30" color="#ff2d2d"></a-cylinder>
+      <a-cone position="0 0.35 0" radius-bottom="0.10" radius-top="0" height="0.25" color="#ff2d2d"></a-cone>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('startBtn');
+
+    async function initVideo() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        const v = document.getElementById('bgvideo');
+        v.srcObject = stream;
+        await v.play();
+        overlay.style.display = 'none';
+      } catch (err) {
+        console.error('カメラ取得に失敗:', err);
+        startBtn.textContent = 'カメラが使えません（権限/HTTPS/他アプリ使用中）';
+      }
+    }
+
+    startBtn.addEventListener('click', initVideo);
+
+    // PCなど自動でも試す
+    initVideo();
+  </script>
+</body>
