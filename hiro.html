@@ -27,5 +27,12 @@
     sceneEl.addEventListener('renderstart', () => console.log('[A-Frame] renderstart'));
     window.addEventListener('error', (e) => console.error('[Error]', e.message, e.filename, e.lineno));
   </script>
+  
+<script>
+  console.log('Inline JS OK');
+  document.body.insertAdjacentHTML('beforeend',
+    '<div style="position:fixed;top:8px;left:8px;color:#0f0;z-index:9999">JS動作OK</div>');
+</script>
+
 </body>
 </html>
