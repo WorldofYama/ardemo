@@ -34,5 +34,30 @@
     '<div style="position:fixed;top:8px;left:8px;color:#0f0;z-index:9999">JS動作OK</div>');
 </script>
 
+  
+<script>
+  // 動的に A-Frame と AR.js をロードして、成功/失敗をログ
+  function addScript(src, name){
+    return new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => { console.log(`[LOAD OK] ${name}`); resolve(); };
+      s.onerror = (e) => { console.error(`[LOAD NG] ${name}`, e); reject(e); };
+      document.head.appendChild(s);
+    });
+  }
+
+  (async () => {
+    try {
+      await addScript('./aframe.min.js', 'aframe.min.js');
+      await addScript('./aframe-ar.js', 'aframe-ar.js');
+      console.log('AFR exists?', typeof AFRAME, AFRAME && AFRAME.VERSION);
+      console.log('THREEx exists?', typeof THREEx);
+    } catch(e) {
+      console.error('Dynamic load failed:', e);
+    }
+  })();
+
+
 </body>
 </html>
