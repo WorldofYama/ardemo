@@ -4,26 +4,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR.js Hiro Marker（黒画面対策・歪み修正版）</title>
+  <title>AR.js Hiro Marker（同階層JS・動作版）</title>
 
-  <!-- ★ 正しい <script> 記法 -->
+  <!-- ★ 同フォルダのJSを正しい ...</script> で読み込む -->
   ./aframe.min.js</script>
   ./aframe-ar.js</script>
 
   <style>
     html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
 
-    /* ★ カメラ映像を全面表示（比率維持／黒帯あり） */
+    /* ★ カメラ映像を全面表示（画面いっぱいに合わせる：黒帯なし） */
     #arjs-video, video {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
       width: 100vw !important;
       height: 100vh !important;
-      object-fit: contain !important;   /* 歪みゼロ（黒帯OK） */
-      z-index: 0 !important;            /* キャンバスの一段下 */
+      object-fit: cover !important;     /* ← これで画面全体にフィット（多少の歪みあり） */
+      z-index: 0 !important;
       margin: 0 !important;             /* 既定の負マージン打消し */
-      background: #000;                  /* 黒帯の背景 */
+      background: #000;
     }
 
     /* ★ A-Frameのキャンバスを映像の上に重ねる */
@@ -38,7 +38,7 @@
     }
 
     .hint {
-      position: fixed; left: 8px; top: 8px; z-index: 2; color:#fff;
+      position: fixed; left: 8px; top: 8px; z-index: 2; color: #fff;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
       font-size: 14px;
     }
@@ -47,7 +47,7 @@
 <body>
   <div class="hint">Hiroマーカーをカメラにかざしてください</div>
 
-  <!-- ※ embedded は外してフルスクリーンで重ねやすくする -->
+  <!-- embedded は不要。フルスクリーン重ね用 -->
   <a-scene
     vr-mode-ui="enabled: false"
     renderer="logarithmicDepthBuffer: true; antialias: true;"
@@ -76,18 +76,15 @@
     console.log('AR.js loaded?', !!(window.ARjs ||
       (window.AFRAME && AFRAME.systems && AFRAME.systems.arjs))); // true ならOK
 
-    // さらに video の状態を確認して、黒画面の原因を切り分け
+    // videoの実測（黒対策・スタイル上書き）
     const v = document.querySelector('#arjs-video') || document.querySelector('video');
     if (v) {
-      console.log('video found:', v, 'width:', v.videoWidth, 'height:', v.videoHeight, 'srcObject:', v.srcObject);
-      // 念のため強制スタイル適用（競合打消し）
+      console.log('video found:', v, 'size:', v.videoWidth, 'x', v.videoHeight);
       Object.assign(v.style, {
         position: 'fixed', top: '0px', left: '0px',
         width: '100vw', height: '100vh', zIndex: '0', margin: '0',
-        objectFit: 'contain', background: '#000'
+        objectFit: 'cover', background: '#000'
       });
-    } else {
-      console.warn('video element not found.');
     }
   </script>
 </body>
