@@ -4,11 +4,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR.js Hiro Marker（歪み修正版）</title>
+  <title>AR.js Hiro Marker（歪み修正版・同階層JS）</title>
 
-  <!-- 同階層のJSを読み込む -->
+  <!-- ★ 必ず ...</script> で読み込む -->
   ./aframe.min.js</script>
-  <script src="./aframe-ar.js"></le>
+  ./aframe-ar.js</script>
+
+  <style>
     html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
 
     /* カメラ映像を全面に表示（比率維持） */
@@ -18,10 +20,10 @@
       left: 0 !important;
       width: 100vw !important;
       height: 100vh !important;
-      object-fit: contain !important; /* ★比率維持（黒帯あり） */
+      object-fit: contain !important; /* ★歪みゼロ（黒帯あり） */
       z-index: 0 !important;
       margin: 0 !important;
-      background: #000; /* 黒帯部分を黒に */
+      background: #000;
     }
 
     /* A-Frameキャンバスを映像の上に重ねる */
@@ -44,7 +46,6 @@
 <body>
   <div class="hint">Hiroマーカーをカメラにかざしてください</div>
 
-  <!-- A-Frameシーン -->
   <a-scene
     vr-mode-ui="enabled: false"
     renderer="logarithmicDepthBuffer: true; antialias: true;"
@@ -67,11 +68,14 @@
     <a-entity camera></a-entity>
   </a-scene>
 
+  <!-- ロード確認（Console） -->
   <script>
-    console.log('AFRAME?', typeof window.AFRAME);
-    console.log('AR.js loaded?', !!(window.ARjs || (AFRAME && AFRAME.systems && AFRAME.systems.arjs)));
+    console.log('AFRAME?', typeof window.AFRAME); // "object" ならOK
+    console.log('AR.js loaded?', !!(window.ARjs ||
+      (window.AFRAME && AFRAME.systems && AFRAME.systems.arjs))); // true ならOK
   </script>
 </body>
 </html>
+
 
 
