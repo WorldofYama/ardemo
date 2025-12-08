@@ -3,65 +3,111 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>AR.js Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR.js 同階層パターン（arrow / cube / warning）</title>
 
-  <!-- A-Frame 安定版 -->
-  https://aframe.io/releases/1.5.0/aframe.min.js</script>
-  <!-- AR.js for A-Frame（固定タグ） -->
-  https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js</script>
+  <!-- ★ 同じフォルダの JS を正しく読み込む（外部CDNなし） -->
+  ./aframe.min.js</script>
+  ./aframe-ar.js</script>
 
   <style>
-    body { margin:0; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial; }
-    .loader { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#fff; z-index:9999; }
-    .hint { position:fixed; left:0; right:0; bottom:8px; text-align:center; font-size:12px; color:#444; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
+
+    /* ★ カメラ映像：比率優先（歪みゼロ＝黒帯あり） */
+    #arjs-video, video {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      object-fit: contain !important;   /* ← 歪みゼロ（黒帯許容） */
+      z-index: 0 !important; margin: 0 !important; background: #000;
+    }
+
+    /* ★ 3Dキャンバスは映像の上に重ねる */
+    canvas, .a-canvas, .a-overlay {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      z-index: 1 !important; pointer-events: none;
+    }
+
+    .hud {
+      position: fixed; left: 8px; top: 8px; z-index: 2; color:#fff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+      font-size: 14px; line-height: 1.6;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+    }
+    .hud code { background: rgba(255,255,255,0.12); padding: 0 4px; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <div class="loader" id="loader">カメラ初期化中…</div>
-  <div class="hint">カメラ許可後、印刷したマーカー（arrow / cube / warning）をかざしてください。</div>
+  <div class="hud">
+    <div>市松パターンをかざしてください：</div>
+    <div>・<code>arrow.patt</code> → 矢印（緑）</div>
+    <div>・<code>cube.patt</code> → キューブ（赤）</div>
+    <div>・<code>warning.patt</code> → 警告表示（黄色）</div>
+  </div>
 
+  <!-- フルスクリーン重ね合わせ（embeddedは外す） -->
   <a-scene
-    embedded
     vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; colorManagement: true;"
-    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; videoTexture: true;
-          cameraParametersUrl: https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/data/data/camera_para.dat;">
-
-    <!-- 矢印（arrow.patt） -->
-    <a-marker type="pattern" url="patt/arrow.patt" emitevents="true" smooth="true"
-              smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-      <a-cylinder position="0 0.10 0" radius="0.03" height="0.30" color="#ff2d2d"></a-cylinder>
-      <a-cone position="0 0.35 0" radius-bottom="0.10" radius-top="0" height="0.25" color="#ff2d2d"></a-cone>
+    renderer="logarithmicDepthBuffer: true; antialias: true;"
+    arjs="
+      trackingMethod: best;
+      sourceType: webcam;
+      facingMode: environment;         /* スマホ背面優先 */
+      sourceWidth: 1280; sourceHeight: 720;
+      displayWidth: 1280; displayHeight: 720;
+      debugUIEnabled: false
+    "
+  >
+    <!-- 1) arrow.patt → 矢印（上向き） -->
+    <a-marker
+      type="pattern"
+      url="./arrow.patt"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5"
+    >
+      <!-- 軸（円柱） -->
+      <a-cylinder position="0 0.5 0" radius="0.06" height="1.0" color="#2ECC71"></a-cylinder>
+      <!-- 先端（円錐） -->
+      <a-cone position="0 1.1 0" radius-bottom="0.15" height="0.4" color="#27AE60"></a-cone>
+      <!-- ラベル -->
+      <a-entity text="value: ↑; align: center; color: #FFFFFF; width: 3;" position="0 1.6 0"></a-entity>
     </a-marker>
 
-    <!-- 立方体（cube.patt） -->
-    <a-marker type="pattern" url="patt/cube.patt" emitevents="true" smooth="true"
-              smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-      <a-box color="#1e88e5" position="0 0.20 0" width="0.28" height="0.28" depth="0.28"></a-box>
+    <!-- 2) cube.patt → キューブ表示（赤） -->
+    <a-marker
+      type="pattern"
+      url="./cube.patt"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5"
+    >
+      <a-box position="0 0.5 0" width="1" height="1" depth="1" material="color:#E74C3C"></a-box>
+      <a-entity text="value: CUBE; align: center; color: #FFFFFF; width: 3;" position="0 1.3 0"></a-entity>
     </a-marker>
 
-    <!-- 警告（warning.patt） -->
-    <a-marker type="pattern" url="patt/warning.patt" emitevents="true" smooth="true"
-              smooth-count="10" smooth-tolerance="0.01" smooth-threshold="2">
-      <a-sphere color="#ffd54f" position="0 0.20 0" radius="0.14"></a-sphere>
-      <a-text value="!" color="#111" position="0 0.36 0" align="center" side="double" scale="2 2 2"></a-text>
+    <!-- 3) warning.patt → 警告表示（黄色三角＋テキスト） -->
+    <a-marker
+      type="pattern"
+      url="./warning.patt"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5"
+    >
+      <!-- 警告アイコン（黄色の三角錐） -->
+      <a-cone position="0 0.6 0" radius-bottom="0.5" height="1.2" color="#F1C40F"></a-cone>
+      <!-- 黒の感嘆符（円柱＋球） -->
+      <a-cylinder position="0 0.8 0" radius="0.06" height="0.5" color="#000000"></a-cylinder>
+      <a-sphere position="0 1.1 0" radius="0.08" color="#000000"></a-sphere>
+      <!-- テキスト -->
+      <a-entity text="value: WARNING!; align: center; color: #FFFFFF; width: 4;" position="0 1.6 0"></a-entity>
     </a-marker>
 
+    <!-- カメラ -->
     <a-entity camera></a-entity>
   </a-scene>
 
+  <!-- ロード確認（任意） -->
   <script>
-    // ローダー制御（初期化が走ったら消す）
-    const loader = document.getElementById('loader');
-    const sceneEl = document.querySelector('a-scene');
-    sceneEl.addEventListener('arReady', () => loader.style.display = 'none');
-    sceneEl.addEventListener('renderstart', () => loader.style.display = 'none');
-
-    // デバッグ：白画面時のヒントをConsoleに出す
-    window.addEventListener('error', (e) => {
-      console.error('[AR] エラー:', e.message, e.filename, e.lineno);
-    });
+    console.log('AFRAME?', typeof window.AFRAME);     // "object" ならOK
+    console.log('AR.js loaded?', !!(window.AFRAME && AFRAME.systems && AFRAME.systems.arjs)); // true ならOK
   </script>
 </body>
 </html>
+
