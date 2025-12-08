@@ -4,41 +4,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR.js Hiro Marker（同階層JS・動作版）</title>
+  <title>AR.js Hiro Marker（社内用・同階層JS）</title>
 
-  <!-- ★ 正しい ...</script> 記法で読み込む -->
+  <!-- 同じフォルダの JS を “正しい書式” で読み込む -->
   ./aframe.min.js</script>
   ./aframe-ar.js</script>
 
+  <!-- favicon は無くてもOK。404が気になるなら以下を削除 or 作成 -->
+  <!-- ./favicon.ico -->
+
   <style>
-    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
-
-    /* カメラ映像を全面表示（黒帯なし） */
-    #arjs-video, video {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover !important;   /* ← 画面全体にフィット（多少の歪みあり） */
-      z-index: 0 !important;
-      margin: 0 !important;           /* AR.jsの負マージンを打消し */
-      background: #000;
-    }
-
-    /* A-Frameのキャンバスを映像の上に重ねる */
-    canvas, .a-canvas, .a-overlay {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 1 !important;
-      pointer-events: none;
-    }
-
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
     .hint {
-      position: fixed; left: 8px; top: 8px; z-index: 2; color:#fff;
+      position: fixed; left: 8px; top: 8px; z-index: 10; color: #fff;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
       font-size: 14px;
     }
@@ -47,24 +25,23 @@
 <body>
   <div class="hint">Hiroマーカーをカメラにかざしてください</div>
 
-  <!-- フルスクリーン重ね用（embeddedなし） -->
+  <!-- arjs をシーンに適用（内部APIへ直接触らない） -->
   <a-scene
+    embedded
     vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; antialias: true;"
-    arjs="
-      trackingMethod: best;
-      sourceType: webcam;
-      facingMode: environment;
-      sourceWidth: 1280; sourceHeight: 720;
-      displayWidth: 1280; displayHeight: 720;
-      debugUIEnabled: false
-    "
+    renderer="logarithmicDepthBuffer: true;"
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false"
   >
-    <a-marker preset="hiro"
-      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-      <a-box position="0 0.5 0" width="1" height="1" depth="1" material="color:#E74C3C"></a-box>
+    <a-marker
+      preset="hiro"
+      smooth="true"
+      smoothCount="10"
+      smoothTolerance="0.01"
+      smoothThreshold="5"
+    >
+      <a-box position="0 0.5 0" depth="1" height="1" width="1" material="color: #E74C3C"></a-box>
       <a-sphere position="0.8 0.5 0" radius="0.35" color="#3498DB"></a-sphere>
-      <a-entity text="value: HIRO; align: center; color: #FFF; width: 3;" position="0 1.3 0"></a-entity>
+      <a-entity text="value: HIRO; align: center; color: #FFFFFF; width: 3;" position="0 1.3 0"></a-entity>
     </a-marker>
 
     <a-entity camera></a-entity>
@@ -72,20 +49,9 @@
 
   <!-- ロード確認（Console） -->
   <script>
-    console.log('AFRAME?', typeof window.AFRAME); // "object" ならOK
+    console.log('AFRAME?', typeof window.AFRAME); // "object" になればOK
     console.log('AR.js loaded?', !!(window.ARjs ||
       (window.AFRAME && AFRAME.systems && AFRAME.systems.arjs))); // true ならOK
-
-    // videoの実測（黒対策・スタイル上書き）
-    const v = document.querySelector('#arjs-video') || document.querySelector('video');
-    if (v) {
-      console.log('video found:', v, 'size:', v.videoWidth, 'x', v.videoHeight);
-      Object.assign(v.style, {
-        position: 'fixed', top: '0px', left: '0px',
-        width: '100vw', height: '100vh', zIndex: '0', margin: '0',
-        objectFit: 'cover', background: '#000'
-      });
-    }
   </script>
 </body>
 </html>
