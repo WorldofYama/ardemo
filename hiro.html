@@ -4,25 +4,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>AR.js Hiro Minimal</title>
+  <title>AR.js Hiro (Local)</title>
 
-  <!-- A-Frame -->
-  https://aframe.io/releases/1.5.0/aframe.min.js</script>
-  <!-- AR.js for A-Frame -->
-  https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.js</script>
+  <!-- ★ CDNではなくローカル（相対パス） -->
+  ./aframe.min.js</script>
+  ./aframe-ar.js</script>
 
   <style>html, body { margin:0; height:100%; background:#000; }</style>
 </head>
 <body>
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: true;">
-    <!-- Hiroプリセット（まずはこれで表示確認） -->
     <a-marker preset="hiro">
       <a-box position="0 0.25 0" depth="0.5" height="0.5" width="0.5" color="#1e88e5"></a-box>
     </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
 
-  <!-- 初期化ログ（任意） -->
+  <!-- 任意：初期化ログ -->
   <script>
     const sceneEl = document.querySelector('a-scene');
     sceneEl.addEventListener('arReady', () => console.log('[AR.js] arReady'));
@@ -30,3 +28,4 @@
     window.addEventListener('error', (e) => console.error('[Error]', e.message, e.filename, e.lineno));
   </script>
 </body>
+</html>
