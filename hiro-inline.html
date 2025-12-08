@@ -4,15 +4,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR.js Hiro Marker（社内用・外部参照なし）</title>
+  <title>AR.js Hiro Marker（社内用・同階層JS）</title>
 
-  <!-- ★ 外部CDNは使わず、同梱JSを相対パスで読み込む -->
-  ./assets/aframe.min.js</script>
-  ./assets/aframe-ar.js</script>
+  <!-- ★ 同じフォルダにある JS を相対パスで読み込む -->
+  <script src="./aframe.min.js"></script>
+  <script src="./aframe-ar.js"></script>
 
-  <!-- 任意：favicon（404防止／置くなら有効化）
-  ./favicon.ico
-  -->
+  <!-- 任意：favicon（同階層またはルートに置いた場合のみ。無ければコメントのまま） -->
+  <!-- <link rel="icon" href="./favicon.ico"> -->
 
   <style>
     html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
@@ -26,14 +25,14 @@
 <body>
   <div class="hint">Hiroマーカーをカメラにかざしてください</div>
 
-  <!-- arjs をシーンに適用 -->
+  <!-- ★ arjs をシーンに適用（内部APIに直接触らない） -->
   <a-scene
     embedded
     vr-mode-ui="enabled: false"
     renderer="logarithmicDepthBuffer: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false"
   >
-    <!-- ★ preset=hiro を使う。内部APIを直接触らない -->
+    <!-- ★ preset=hiro を使う。スムージングのみ属性で指定 -->
     <a-marker
       preset="hiro"
       smooth="true"
@@ -49,5 +48,15 @@
     <!-- カメラ -->
     <a-entity camera></a-entity>
   </a-scene>
+
+  <!-- 読み込み確認（Consoleに出ます） -->
+  <script>
+    console.log('AFRAME?', typeof window.AFRAME);                // "object" ならOK
+    console.log('AR.js loaded?', !!(window.ARjs ||
+      (window.AFRAME && AFRAME.systems && AFRAME.systems.arjs))); // true ならOK
+  </script>
 </body>
 </html>
+
+
+
