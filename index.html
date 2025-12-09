@@ -3,170 +3,18 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>AR.js Debug - arrow / cube / warning</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-
-  <!-- ローカルJS -->
-  aframe.min.js</script>
-  <script src="/script>
-
+  <title>Quick HTML Check</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    html, body { margin:0; padding:0; background:#000; color:#fff; font-family:system-ui, sans-serif; }
-    #ui { position:fixed; left:0; right:0; top:0; z-index:1000; padding:8px 12px; background:rgba(0,0,0,0.6); }
-    #log { font-size:12px; white-space:pre-wrap; max-height:30vh; overflow:auto; margin-top:6px; }
-    #start { margin-top:8px; padding:8px 12px; background:#1e90ff; color:#fff; border:none; border-radius:6px; }
-    #error { display:none; position:fixed; left:0; right:0; bottom:0; padding:8px 12px; background:#b00020; z-index:1000; }
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    code { background: #f2f2f2; padding: 0.2rem 0.4rem; border-radius: 4px; }
   </style>
 </head>
 <body>
-
-  <div id="ui">
-    <div>マーカー：<strong>markers/arrow.patt / cube.patt / warning.patt</strong></div>
-    <button id="start">AR開始（カメラ許可が必要）</button>
-    <div id="log"></div>
-  </div>
-  <div id="error"></div>
-
-  <script>
-    // 画面内ログ出力
-    const logEl = document.getElementById('log');
-    function log(msg) {
-      console.log(msg);
-      logEl.textContent += (msg + '\n');
-    }
-
-    // 画面内エラー表示
-    const errEl = document.getElementById('error');
-    function showError(msg) {
-      console.error(msg);
-      errEl.textContent = 'ERROR: ' + msg;
-      errEl.style.display = 'block';
-    }
-    window.addEventListener('error', e => showError(e.message));
-
-    // ロード確認
-    (function selfCheck(){
-      try {
-        log('Self-check: start');
-        log('AFRAME defined? ' + (typeof AFRAME !== 'undefined'));
-        if (typeof AFRAME === 'undefined') {
-          showError('A-Frame が読み込まれていません。aframe.min.js のパス/ファイル名を確認してください。');
-          return;
-        }
-        log('AFRAME version: ' + (AFRAME.version || 'unknown'));
-
-        // AR.js（aframe-ar.js）側が AFRAME.components['arjs'] を登録する想定
-        const hasArjs = !!AFRAME.components && !!AFRAME.components['arjs'];
-        log('AR.js (arjs component) loaded? ' + hasArjs);
-        if (!hasArjs) {
-          showError('AR.js (aframe-ar.js) が読み込まれていません。aframe-ar.js のパス/ファイル名を確認してください。');
-          return;
-        }
-
-        log('Self-check: ok (scripts loaded)');
-      } catch (e) {
-        showError('Self-check で例外: ' + e.message);
-      }
-    })();
-
-    // iOS/Safari向け：ユーザー操作で起動
-    document.getElementById('start').addEventListener('click', () => {
-      try {
-        initScene();
-      } catch (e) {
-        showError('initScene 例外: ' + e.message);
-      }
-    });
-
-    function initScene() {
-      log('initScene: creating a-scene');
-      const scene = document.createElement('a-scene');
-      scene.setAttribute('embedded', '');
-      scene.setAttribute('vr-mode-ui', 'enabled: false');
-      scene.setAttribute('renderer', 'logarithmicDepthBuffer: true; antialias: true');
-      scene.setAttribute('arjs', 'sourceType: webcam; detectionMode: mono_and_matrix; patternRatio: 0.5; debugUIEnabled: false');
-
-      const camera = document.createElement('a-entity');
-      camera.setAttribute('camera', '');
-      scene.appendChild(camera);
-
-      // arrow（右向き +X、底面を y=0.10）
-      const mArrow = document.createElement('a-marker');
-      mArrow.setAttribute('type', 'pattern');
-      mArrow.setAttribute('url', 'markers/arrow.patt');
-      const arrowRoot = document.createElement('a-entity');
-      arrowRoot.setAttribute('position', '0 0.10 0');
-
-      const cyl = document.createElement('a-cylinder');
-      cyl.setAttribute('position', '0.05 0 0');
-      cyl.setAttribute('rotation', '0 0 90');
-      cyl.setAttribute('radius', '0.015');
-      cyl.setAttribute('height', '0.10');
-      cyl.setAttribute('color', '#1e90ff');
-      arrowRoot.appendChild(cyl);
-
-      const cone = document.createElement('a-cone');
-      cone.setAttribute('position', '0.10 0 0');
-      cone.setAttribute('rotation', '0 0 90');
-      cone.setAttribute('radius-bottom', '0.035');
-      cone.setAttribute('radius-top', '0.000');
-      cone.setAttribute('height', '0.08');
-      cone.setAttribute('color', '#ff7f50');
-      arrowRoot.appendChild(cone);
-
-      mArrow.appendChild(arrowRoot);
-      scene.appendChild(mArrow);
-
-      // cube（10cm、一辺0.10、中心 y=0.15）
-      const mCube = document.createElement('a-marker');
-      mCube.setAttribute('type', 'pattern');
-      mCube.setAttribute('url', 'markers/cube.patt');
-      const box = document.createElement('a-box');
-      box.setAttribute('position', '0 0.15 0');
-      box.setAttribute('depth', '0.10');
-      box.setAttribute('height', '0.10');
-      box.setAttribute('width', '0.10');
-      box.setAttribute('color', '#32cd32');
-      mCube.appendChild(box);
-      scene.appendChild(mCube);
-
-      // warning（三角＋「！」）
-      const mWarn = document.createElement('a-marker');
-      mWarn.setAttribute('type', 'pattern');
-      mWarn.setAttribute('url', 'markers/warning.patt');
-      const tri = document.createElement('a-cone');
-      tri.setAttribute('position', '0 0.14 0');
-      tri.setAttribute('rotation', '0 0 0');
-      tri.setAttribute('radius-bottom', '0.06');
-      tri.setAttribute('radius-top', '0.00');
-      tri.setAttribute('height', '0.08');
-      tri.setAttribute('color', '#ffd400');
-      mWarn.appendChild(tri);
-
-      const txt = document.createElement('a-text');
-      txt.setAttribute('value', '!');
-      txt.setAttribute('position', '0 0.18 0');
-      txt.setAttribute('rotation', '-90 0 0');
-      txt.setAttribute('align', 'center');
-      txt.setAttribute('color', '#000000');
-      // ※ shader="msdf" は環境差が出るので一旦外す
-      txt.setAttribute('width', '0.6');
-      mWarn.appendChild(txt);
-
-      scene.appendChild(mWarn);
-
-      document.body.appendChild(scene);
-      log('initScene: scene appended');
-
-      scene.addEventListener('loaded', () => log('A-Frame scene loaded'));
-      mArrow.addEventListener('markerFound', () => log('arrow markerFound'));
-      mCube.addEventListener('markerFound', () => log('cube markerFound'));
-      mWarn.addEventListener('markerFound', () => log('warning markerFound'));
-      mArrow.addEventListener('markerLost', () => log('arrow markerLost'));
-      mCube.addEventListener('markerLost', () => log('cube markerLost'));
-      mWarn.addEventListener('markerLost', () => log('warning markerLost'));
-    }
-  </script>
+  <h1>HTMLは正しく表示されています</h1>
+  <p>これは最小のテストページです。問題なく表示されるなら、HTMLが正常に配信されています。</p>
+  <p>次に A-Frame/AR.js を読み込む版へ差し替えましょう。</p>
 </body>
 </html>
+
 
