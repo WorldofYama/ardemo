@@ -3,45 +3,120 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>Marker AR (arrow / cube / warning)</title>
+  <title>AR.js Debug (local)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ローカルJS -->
   aframe.min.js</script>
   aframe-ar.js</script>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
-    #hint { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px; font-family: system-ui, sans-serif; font-size: 14px; color: #fff; background: rgba(0,0,0,0.45); z-index: 10; }
+    html, body { margin:0; background:#000; color:#fff; font-family:system-ui, sans-serif; }
+    #ui { position:fixed; left:0; right:0; top:0; z-index:1000; padding:8px 12px; background:rgba(0,0,0,0.5); }
+    #log { font-size:12px; white-space:pre-wrap; max-height:30vh; overflow:auto; margin-top:6px; }
+    #start { margin-top:8px; padding:8px 12px; background:#1e90ff; color:#fff; border:none; border-radius:6px; }
+    #err { display:none; position:fixed; left:0; right:0; bottom:0; padding:8px 12px; background:#b00020; z-index:1000; }
   </style>
 </head>
 <body>
-  <div id="hint">マーカー（arrow / cube / warning）をカメラに映してください。</div>
+  <div id="ui">
+    <div>ローカルJS読み込み確認（A‑Frame → AR.js）</div>
+    <button id="start">AR開始（カメラ許可が必要）</button>
+    <div id="log"></div>
+  </div>
+  <div id="err"></div>
 
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; antialias: true"
-    arjs="sourceType: webcam; detectionMode: mono_and_matrix; patternRatio: 0.5; debugUIEnabled: false">
+  <script>
+    const logEl = document.getElementById('log');
+    const errEl = document.getElementById('err');
+    function log(msg){ console.log(msg); logEl.textContent += msg + '\n'; }
+    function showErr(msg){ console.error(msg); errEl.textContent = 'ERROR: ' + msg; errEl.style.display = 'block'; }
+    window.addEventListener('error', e => showErr(e.message));
 
-    <a-entity camera></a-entity>
+    // スクリプトの自己診断
+    (function selfCheck(){
+      log('AFRAME defined? ' + (typeof AFRAME !== 'undefined'));
+      if (typeof AFRAME === 'undefined'){ showErr('A‑Frame未読込。aframe.min.jsのパス/ファイル名を確認'); return; }
+      log('AFRAME version: ' + (AFRAME.version || 'unknown'));
+      const hasArjs = !!AFRAME.components && !!AFRAME.components['arjs'];
+      log('AR.js (arjs component) loaded? ' + hasArjs);
+      if (!hasArjs){ showErr('AR.js未読込。aframe-ar.jsのパス/ファイル名を確認'); return; }
+      log('Script load OK');
+    })();
 
-    <!-- arrow：右向き（+X）、底面 y=0.10（= マーカー面から10cm浮き） -->
-    <a-marker type="pattern" url="markers/arrow.patt">
-      <a-entity position="0 0.10 0">
-        <a-cylinder position="0.05 0 0" rotation="0 0 90" radius="0.015" height="0.10" color="#1e90ff"></a-cylinder>
-        <a-cone     position="0.10 0 0" rotation="0 0 90" radius-bottom="0.035" radius-top="0.000" height="0.08" color="#ff7f50"></a-cone>
-      </a-entity>
-    </a-marker>
+    document.getElementById('start').addEventListener('click', () => {
+      try { initScene(); } catch(e){ showErr('initScene 例外: ' + e.message); }
+    });
 
-    <!-- cube：一辺 10cm、底面 y=0.10 -->
-    <a-marker type="pattern" url="markers/cube.patt">
-      <a-box position="0 0.15 0" depth="0.10" height="0.10" width="0.10" color="#32cd32"></a-box>
-    </a-marker>
+    function initScene(){
+      log('initScene: create scene');
+      const scene = document.createElement('a-scene');
+      scene.setAttribute('embedded', '');
+      scene.setAttribute('vr-mode-ui', 'enabled:false');
+      scene.setAttribute('renderer', 'logarithmicDepthBuffer:true; antialias:true');
+      // debugUIEnabled:true でカメラ選択などのUIを表示
+      scene.setAttribute('arjs', 'sourceType:webcam; detectionMode:mono_and_matrix; patternRatio:0.5; debugUIEnabled:true');
 
-    <!-- warning：黄色三角＋黒「！」、底面 y≈0.10 -->
-    <a-marker type="pattern" url="markers/warning.patt">
-      <a-cone position="0 0.14 0" radius-bottom="0.06" radius-top="0.00" height="0.08" color="#ffd400"></a-cone>
-      <a-text value="!" position="0 0.18 0" rotation="-90 0 0" align="center" color="#000000" width="0.6"></a-text>
-    </a-marker>
+      const cam = document.createElement('a-entity');
+      cam.setAttribute('camera','');
+      scene.appendChild(cam);
 
-  </a-scene>
+      // arrow marker
+      const mArrow = document.createElement('a-marker');
+      mArrow.setAttribute('type','pattern');
+      mArrow.setAttribute('url','markers/arrow.patt');
+      const arrowRoot = document.createElement('a-entity');
+      arrowRoot.setAttribute('position','0 0.10 0');
+      const cyl = document.createElement('a-cylinder');
+      cyl.setAttribute('position','0.05 0 0'); cyl.setAttribute('rotation','0 0 90');
+      cyl.setAttribute('radius','0.015'); cyl.setAttribute('height','0.10'); cyl.setAttribute('color','#1e90ff');
+      const cone = document.createElement('a-cone');
+      cone.setAttribute('position','0.10 0 0'); cone.setAttribute('rotation','0 0 90');
+      cone.setAttribute('radius-bottom','0.035'); cone.setAttribute('radius-top','0.000'); cone.setAttribute('height','0.08'); cone.setAttribute('color','#ff7f50');
+      arrowRoot.appendChild(cyl); arrowRoot.appendChild(cone);
+      mArrow.appendChild(arrowRoot);
+      scene.appendChild(mArrow);
+
+      // cube marker
+      const mCube = document.createElement('a-marker');
+      mCube.setAttribute('type','pattern');
+      mCube.setAttribute('url','markers/cube.patt');
+      const box = document.createElement('a-box');
+      box.setAttribute('position','0 0.15 0'); box.setAttribute('depth','0.10'); box.setAttribute('height','0.10'); box.setAttribute('width','0.10'); box.setAttribute('color','#32cd32');
+      mCube.appendChild(box);
+      scene.appendChild(mCube);
+
+      // warning marker
+      const mWarn = document.createElement('a-marker');
+      mWarn.setAttribute('type','pattern');
+      mWarn.setAttribute('url','markers/warning.patt');
+      const tri = document.createElement('a-cone');
+      tri.setAttribute('position','0 0.14 0'); tri.setAttribute('radius-bottom','0.06'); tri.setAttribute('radius-top','0.00'); tri.setAttribute('height','0.08'); tri.setAttribute('color','#ffd400');
+      const txt = document.createElement('a-text');
+      txt.setAttribute('value','!'); txt.setAttribute('position','0 0.18 0'); txt.setAttribute('rotation','-90 0 0'); txt.setAttribute('align','center'); txt.setAttribute('color','#000000'); txt.setAttribute('width','0.6');
+      mWarn.appendChild(tri); mWarn.appendChild(txt);
+      scene.appendChild(mWarn);
+
+      document.body.appendChild(scene);
+      log('scene appended');
+
+      scene.addEventListener('loaded', () => log('A‑Frame scene loaded'));
+      mArrow.addEventListener('markerFound', () => log('arrow markerFound'));
+      mCube.addEventListener('markerFound', () => log('cube markerFound'));
+      mWarn.addEventListener('markerFound', () => log('warning markerFound'));
+      mArrow.addEventListener('markerLost', () => log('arrow markerLost'));
+      mCube.addEventListener('markerLost', () => log('cube markerLost'));
+      mWarn.addEventListener('markerLost', () => log('warning markerLost'));
+
+      // カメラ権限周りの典型的エラーを拾う
+      navigator.mediaDevices && navigator.mediaDevices.getUserMedia({video:true})
+        .then(() => log('getUserMedia preflight OK'))
+        .catch(err => showErr('Camera permission error: ' + (err && err.name ? err.name : err)));
+    }
+  </script>
+
+  <div style="position:fixed;left:0;right:0;bottom:0;padding:8px 12px;color:#fff;background:rgba(0,0,0,0.45);z-index:999;">
+    マーカー（<strong>arrow / cube / warning</strong>）をカメラに映してください。<br>
+    カメラが黒い場合は、上の「AR開始」を押して権限を許可してください。
+  </div>
 </body>
 </html>
+
