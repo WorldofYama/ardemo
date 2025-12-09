@@ -3,133 +3,170 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>Marker AR (arrow / cube / warning)</title>
+  <title>AR.js Debug - arrow / cube / warning</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-  <!-- ローカルの A-Frame と AR.js（A-Frame 版） -->
-  <script src="aframept>
-  aframe-ar.js</script>
+  <!-- ローカルJS -->
+  aframe.min.js</script>
+  <script src="/script>
 
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
-    #hint {
-      position: fixed; left: 0; right: 0; bottom: 0;
-      padding: 8px 12px; font-family: system-ui, sans-serif;
-      font-size: 14px; color: #fff; background: rgba(0,0,0,0.45); z-index: 10;
-    }
-    #hint strong { color: #ffd400; }
+    html, body { margin:0; padding:0; background:#000; color:#fff; font-family:system-ui, sans-serif; }
+    #ui { position:fixed; left:0; right:0; top:0; z-index:1000; padding:8px 12px; background:rgba(0,0,0,0.6); }
+    #log { font-size:12px; white-space:pre-wrap; max-height:30vh; overflow:auto; margin-top:6px; }
+    #start { margin-top:8px; padding:8px 12px; background:#1e90ff; color:#fff; border:none; border-radius:6px; }
+    #error { display:none; position:fixed; left:0; right:0; bottom:0; padding:8px 12px; background:#b00020; z-index:1000; }
   </style>
 </head>
 <body>
 
-  <div id="hint">
-    マーカー（<strong>arrow / cube / warning</strong>）をカメラに映してください。<br>
-    各オブジェクトは <strong>10cm 角以内</strong>、<strong>マーカー面から 10cm 浮き</strong>で表示されます。
+  <div id="ui">
+    <div>マーカー：<strong>markers/arrow.patt / cube.patt / warning.patt</strong></div>
+    <button id="start">AR開始（カメラ許可が必要）</button>
+    <div id="log"></div>
   </div>
+  <div id="error"></div>
 
-  <!--
-    arjs 設定：
-    - sourceType: webcam（端末カメラ）
-    - detectionMode: mono_and_matrix（一般的）
-    - patternRatio: 0.5（標準的な枠比）
-    - debugUIEnabled: false（必要なら true）
-  -->
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; antialias: true"
-    arjs="sourceType: webcam; detectionMode: mono_and_matrix; patternRatio: 0.5; debugUIEnabled: false"
-  >
+  <script>
+    // 画面内ログ出力
+    const logEl = document.getElementById('log');
+    function log(msg) {
+      console.log(msg);
+      logEl.textContent += (msg + '\n');
+    }
 
-    <!-- カメラ -->
-    <a-entity camera></a-entity>
+    // 画面内エラー表示
+    const errEl = document.getElementById('error');
+    function showError(msg) {
+      console.error(msg);
+      errEl.textContent = 'ERROR: ' + msg;
+      errEl.style.display = 'block';
+    }
+    window.addEventListener('error', e => showError(e.message));
 
-    <!-- ========== arrow マーカー：矢印（+X ＝ 右向き） ========== -->
-    <!-- オブジェクト全体を y=0.10 に持ち上げて「底面が 10cm 浮き」になるようにします。 -->
-    <a-marker type="pattern" url="markers/arrow.patt">
-      <a-entity position="0 0.10 0">
-        <!-- 軸（シリンダは Y 軸方向なので、Z 軸に 90°回して X 軸方向へ） -->
-        <a-cylinder
-          position="0.05 0 0"   <!-- 軸の中心を少し右へ（X=5cm） -->
-          rotation="0 0 90"
-          radius="0.015"        <!-- 半径 1.5cm -->
-          height="0.10"         <!-- 長さ 10cm -->
-          color="#1e90ff"
-          material="metalness:0.2; roughness:0.8">
-        </a-cylinder>
+    // ロード確認
+    (function selfCheck(){
+      try {
+        log('Self-check: start');
+        log('AFRAME defined? ' + (typeof AFRAME !== 'undefined'));
+        if (typeof AFRAME === 'undefined') {
+          showError('A-Frame が読み込まれていません。aframe.min.js のパス/ファイル名を確認してください。');
+          return;
+        }
+        log('AFRAME version: ' + (AFRAME.version || 'unknown'));
 
-        <!-- 矢じり（コーンも Y 軸方向なので Z 軸に 90°回す） -->
-        <a-cone
-          position="0.10 0 0"   <!-- 先端位置（X=10cm） -->
-          rotation="0 0 90"
-          radius-bottom="0.035"  <!-- 底半径 3.5cm -->
-          radius-top="0.000"
-          height="0.08"          <!-- 矢じり長さ 8cm -->
-          color="#ff7f50"
-          material="metalness:0.2; roughness:0.5">
-        </a-cone>
+        // AR.js（aframe-ar.js）側が AFRAME.components['arjs'] を登録する想定
+        const hasArjs = !!AFRAME.components && !!AFRAME.components['arjs'];
+        log('AR.js (arjs component) loaded? ' + hasArjs);
+        if (!hasArjs) {
+          showError('AR.js (aframe-ar.js) が読み込まれていません。aframe-ar.js のパス/ファイル名を確認してください。');
+          return;
+        }
 
-        <!-- ラベル（任意・上から見やすく、+X のため真上に立てない） -->
-        <a-text
-          value="Arrow →"
-          position="0 0.06 0"
-          rotation="-90 0 0"     <!-- 上から読みやすく寝かせる -->
-          align="center"
-          color="#ffffff"
-          shader="msdf"
-          width="0.6">
-        </a-text>
-      </a-entity>
-    </a-marker>
+        log('Self-check: ok (scripts loaded)');
+      } catch (e) {
+        showError('Self-check で例外: ' + e.message);
+      }
+    })();
 
-    <!-- ========== cube マーカー：立方体（10cm） ========== -->
-    <!-- 高さ 10cm のボックスの「底面を y=0.10」に置くため、中心 y は 0.10 + 0.05 = 0.15 -->
-    <a-marker type="pattern" url="markers/cube.patt">
-      <a-box
-        position="0 0.15 0"
-        rotation="0 0 0"
-        depth="0.10" height="0.10" width="0.10"
-        color="#32cd32"
-        material="metalness:0.1; roughness:0.9">
-      </a-box>
+    // iOS/Safari向け：ユーザー操作で起動
+    document.getElementById('start').addEventListener('click', () => {
+      try {
+        initScene();
+      } catch (e) {
+        showError('initScene 例外: ' + e.message);
+      }
+    });
 
-      <a-text
-        value="Cube (10cm)"
-        position="0 0.23 0"
-        rotation="-90 0 0"
-        align="center"
-        color="#ffffff"
-        shader="msdf"
-        width="0.8">
-      </a-text>
-    </a-marker>
+    function initScene() {
+      log('initScene: creating a-scene');
+      const scene = document.createElement('a-scene');
+      scene.setAttribute('embedded', '');
+      scene.setAttribute('vr-mode-ui', 'enabled: false');
+      scene.setAttribute('renderer', 'logarithmicDepthBuffer: true; antialias: true');
+      scene.setAttribute('arjs', 'sourceType: webcam; detectionMode: mono_and_matrix; patternRatio: 0.5; debugUIEnabled: false');
 
-    <!-- ========== warning マーカー：黄色三角＋黒「！」 ========== -->
-    <!-- 三角はコーンを薄くして記号風に。底面を y=0.10 に合わせるため中心 y は適宜。 -->
-    <a-marker type="pattern" url="markers/warning.patt">
-      <!-- 三角プレート（高さ 8cm 程度、半径 6cm） -->
-      <a-cone
-        position="0 0.14 0"     <!-- 中心 y を少し上げる（底が y=0.10 付近になるように） -->
-        rotation="0 0 0"
-        radius-bottom="0.06"
-        radius-top="0.00"
-        height="0.08"
-        color="#ffd400"
-        material="metalness:0.0; roughness:1.0">
-      </a-cone>
+      const camera = document.createElement('a-entity');
+      camera.setAttribute('camera', '');
+      scene.appendChild(camera);
 
-      <!-- 黒の「！」（三角の少し上に） -->
-      <a-text
-        value="!"
-        position="0 0.18 0"
-        rotation="-90 0 0"
-        align="center"
-        color="#000000"
-        shader="msdf"
-        width="0.6">
-      </a-text>
-    </a-marker>
+      // arrow（右向き +X、底面を y=0.10）
+      const mArrow = document.createElement('a-marker');
+      mArrow.setAttribute('type', 'pattern');
+      mArrow.setAttribute('url', 'markers/arrow.patt');
+      const arrowRoot = document.createElement('a-entity');
+      arrowRoot.setAttribute('position', '0 0.10 0');
 
-  </a-scene>
+      const cyl = document.createElement('a-cylinder');
+      cyl.setAttribute('position', '0.05 0 0');
+      cyl.setAttribute('rotation', '0 0 90');
+      cyl.setAttribute('radius', '0.015');
+      cyl.setAttribute('height', '0.10');
+      cyl.setAttribute('color', '#1e90ff');
+      arrowRoot.appendChild(cyl);
+
+      const cone = document.createElement('a-cone');
+      cone.setAttribute('position', '0.10 0 0');
+      cone.setAttribute('rotation', '0 0 90');
+      cone.setAttribute('radius-bottom', '0.035');
+      cone.setAttribute('radius-top', '0.000');
+      cone.setAttribute('height', '0.08');
+      cone.setAttribute('color', '#ff7f50');
+      arrowRoot.appendChild(cone);
+
+      mArrow.appendChild(arrowRoot);
+      scene.appendChild(mArrow);
+
+      // cube（10cm、一辺0.10、中心 y=0.15）
+      const mCube = document.createElement('a-marker');
+      mCube.setAttribute('type', 'pattern');
+      mCube.setAttribute('url', 'markers/cube.patt');
+      const box = document.createElement('a-box');
+      box.setAttribute('position', '0 0.15 0');
+      box.setAttribute('depth', '0.10');
+      box.setAttribute('height', '0.10');
+      box.setAttribute('width', '0.10');
+      box.setAttribute('color', '#32cd32');
+      mCube.appendChild(box);
+      scene.appendChild(mCube);
+
+      // warning（三角＋「！」）
+      const mWarn = document.createElement('a-marker');
+      mWarn.setAttribute('type', 'pattern');
+      mWarn.setAttribute('url', 'markers/warning.patt');
+      const tri = document.createElement('a-cone');
+      tri.setAttribute('position', '0 0.14 0');
+      tri.setAttribute('rotation', '0 0 0');
+      tri.setAttribute('radius-bottom', '0.06');
+      tri.setAttribute('radius-top', '0.00');
+      tri.setAttribute('height', '0.08');
+      tri.setAttribute('color', '#ffd400');
+      mWarn.appendChild(tri);
+
+      const txt = document.createElement('a-text');
+      txt.setAttribute('value', '!');
+      txt.setAttribute('position', '0 0.18 0');
+      txt.setAttribute('rotation', '-90 0 0');
+      txt.setAttribute('align', 'center');
+      txt.setAttribute('color', '#000000');
+      // ※ shader="msdf" は環境差が出るので一旦外す
+      txt.setAttribute('width', '0.6');
+      mWarn.appendChild(txt);
+
+      scene.appendChild(mWarn);
+
+      document.body.appendChild(scene);
+      log('initScene: scene appended');
+
+      scene.addEventListener('loaded', () => log('A-Frame scene loaded'));
+      mArrow.addEventListener('markerFound', () => log('arrow markerFound'));
+      mCube.addEventListener('markerFound', () => log('cube markerFound'));
+      mWarn.addEventListener('markerFound', () => log('warning markerFound'));
+      mArrow.addEventListener('markerLost', () => log('arrow markerLost'));
+      mCube.addEventListener('markerLost', () => log('cube markerLost'));
+      mWarn.addEventListener('markerLost', () => log('warning markerLost'));
+    }
+  </script>
 </body>
 </html>
+
