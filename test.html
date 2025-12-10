@@ -81,5 +81,19 @@
 
   (async()=>{ const attr = await ensureLibs(); mountScene(attr); })().catch(err);
   </script>
+  
+<script>
+(async () => {
+  const u = '/ardemo/aframe-ar.js';
+  const t = await (await fetch(u, {cache:'no-store'})).text();
+  // 先頭と、登録コードの有無をチェック
+  console.log('aframe-ar.js first 200 chars:\n', t.slice(0, 200));
+  console.log('contains AFRAME.registerComponent("arjs")?', t.includes("AFRAME.registerComponent('arjs"));
+  console.log('contains AFRAME.registerComponent("artoolkit")?', t.includes("AFRAME.registerComponent('artoolkit"));
+  console.log('file length:', t.length);
+})();
+</script>
+
 </body>
 </html>
+
