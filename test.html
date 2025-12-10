@@ -2,48 +2,49 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<title>AR.js A‑Frame ローカル完全版</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<!-- ローカル絶対パスで参照 -->
-/ardemo/aframe.min.js</script>
-/ardemo/ar-threex.js</script>
-<script srcame-ar.js</script>
-<style>
-body {margin:0;overflow:hidden;font-family:sans-serif;}
-#hud {background:#111;color:#0f0;padding:8px;white-space:pre;}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>復旧テスト（Hiroのみ）</title>
+  <!-- ローカル固定 -->
+  /ardemo/aframe.min.js</script>
+  /ardemo/ar-threex.js</script>
+  /ardemo/aframe-ar.js</script>
+  <style>body{margin:0;overflow:hidden}#hud{background:#111;color:#0f0;padding:8px;white-space:pre}</style>
 </head>
 <body>
-<pre id="hud"></pre>
-<script>
-const hud = s => document.getElementById('hud').textContent += s + '\n';
-hud('[check] AFRAME defined? ' + !!window.AFRAME);
-hud('[check] THREE exists? ' + !!window.THREE);
-const comps = (AFRAME && AFRAME.components) || {};
-hud('arjs? ' + !!comps['arjs'] + ' / artoolkit? ' + !!comps['artoolkit']);
+  <pre id="hud"></pre>
+  <script>
+    const hud = s => document.getElementById('hud').textContent += s + '\n';
+    hud('[check] AFRAME: ' + !!window.AFRAME);
+    hud('[check] THREE : ' + !!window.THREE);
+    const comps = (AFRAME && AFRAME.components) || {};
+    hud('arjs? ' + !!comps['arjs'] + ' / artoolkit? ' + !!comps['artoolkit']);
 
-const scene = document.createElement('a-scene');
-scene.setAttribute('embedded','');
-if (comps['arjs']) scene.setAttribute('arjs','sourceType: webcam');
-else if (comps['artoolkit']) scene.setAttribute('artoolkit','');
-else hud('[fatal] ブリッジ未登録（aframe-ar.jsのロード/実行に問題）');
+    const scene = document.createElement('a-scene');
+    scene.setAttribute('embedded','');
+    // どちらか生きている方を使う
+    if (comps['arjs']) scene.setAttribute('arjs','sourceType: webcam; debugUIEnabled: false');
+    else if (comps['artoolkit']) scene.setAttribute('artoolkit','');
 
-const markerCam = document.createElement('a-marker-camera');
-markerCam.setAttribute('preset','hiro');
-scene.appendChild(markerCam);
+    // カメラはプリセットhiro
+    const markerCam = document.createElement('a-marker-camera');
+    markerCam.setAttribute('preset','hiro');
+    scene.appendChild(markerCam);
 
-const box = document.createElement('a-box');
-box.setAttribute('position','0 0.5 0');
-box.setAttribute('color','#4CC3D9');
-scene.appendChild(box);
+    // 既知良の箱（モデルはまだ載せない）
+    const box = document.createElement('a-box');
+    box.setAttribute('position','0 0.5 0');
+    box.setAttribute('scale','1 1 1');    // 歪みチェック用に等方スケール固定
+    box.setAttribute('rotation','0 0 0'); // 余計な回転なし
+    box.setAttribute('color','#4CC3D9');
+    scene.appendChild(box);
 
-const camEntity = document.createElement('a-entity');
-camEntity.setAttribute('camera','');
-scene.appendChild(camEntity);
+    const camEntity = document.createElement('a-entity');
+    camEntity.setAttribute('camera','');
+    scene.appendChild(camEntity);
 
-document.body.appendChild(scene);
-</script>
+    document.body.appendChild(scene);
+  </script>
 </body>
 </html>
 
