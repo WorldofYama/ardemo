@@ -4,57 +4,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + A‑Frame（fetch+eval 標準）</title>
+  <title>AR.js + A‑Frame（3ファイル方式 / fetch+eval）</title>
   <style>body{margin:0;overflow:hidden}</style>
 </head>
 <body>
   <div id="app"></div>
 
   <script>
-    // ==== 設定（あなたの配置に合わせる） ====
     const PATHS = {
-      AFRAME: '/ardemo/aframe.min.js',          // A‑Frame 1.6.0（ローカル）
-      ARJS:   '/ardemo/aframe-ar.js',           // AR.js 3.4.x（A‑Frame版、ローカル）
-      PATT:   '/ardemo/markers/yourmarker.patt' // 独自パターンに切替時に使用
+      CORE:   '/ardemo/ar-threex.js',   // ① AR.js threeコア
+      AFRAME: '/ardemo/aframe.min.js',  // ② A‑Frame
+      ARJS:   '/ardemo/aframe-ar.js',   // ③ A‑Frameブリッジ
+      PATT:   '/ardemo/markers/yourmarker.patt'
     };
-    const USE_HIRO = true; // 映ったら false にして独自パターンへ
+    const USE_HIRO = true; // まずは Hiro で起動確認
 
-    // ==== 二重起動を防止 ====
-    if (window.__ar_loader_started__) {
-      console.warn('Loader already started. Skip.');
-    } else {
-      window.__ar_loader_started__ = true;
-    }
+    if (window.__ar_loader_started__) { console.warn('Loader already started.'); }
+    else { window.__ar_loader_started__ = true; }
 
-    // ==== fetch → eval（順序保証） ====
     async function loadTextAndEval(url) {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`Fetch failed: ${url} (${res.status})`);
       const text = await res.text();
-      (0, eval)(text); // グローバルに評価
+      (0, eval)(text);
       console.log('[eval loaded]', url);
     }
 
-    // ==== A‑Frame / AR.js の存在確認（再evalの事故防止） ====
     async function ensureLibs() {
+      // ★ 順序が肝心：① コア → ② A‑Frame → ③ ブリッジ
+      if (!window.THREEx) await loadTextAndEval(PATHS.CORE);
       if (!window.AFRAME) await loadTextAndEval(PATHS.AFRAME);
       if (!AFRAME?.components?.arjs) await loadTextAndEval(PATHS.ARJS);
 
+      console.log('THREEx exists?', !!window.THREEx);
       console.log('AFRAME defined?', !!window.AFRAME);
       console.log('AR.js component exists?', !!AFRAME.components['arjs']);
-      if (!window.AFRAME || !AFRAME.components['arjs']) {
-        throw new Error('A‑Frame / AR.js のロードに失敗しました');
+      if (!window.THREEx || !window.AFRAME || !AFRAME.components['arjs']) {
+        throw new Error('AR.js / A‑Frame のロードに失敗しました（順序 or ファイル内容を再確認）');
       }
     }
 
-    // ==== シーン挿入（Hiro ↔ pattern を切り替え） ====
     function mountScene({ useHiro }) {
       const sceneHiro = `
         <a-scene embedded arjs>
           <a-box position="0 0.5 0" material="opacity:0.6; color:#4CC3D9"></a-box>
           <a-marker-camera preset="hiro"></a-marker-camera>
         </a-scene>`;
-
       const scenePattern = `
         <a-scene embedded arjs>
           <a-marker type="pattern" url="${PATHS.PATT}" emitevents="true">
@@ -62,19 +57,14 @@
           </a-marker>
           <a-entity camera></a-entity>
         </a-scene>`;
-
       document.getElementById('app').innerHTML = useHiro ? sceneHiro : scenePattern;
     }
 
-    // ==== 起動 ====
     (async () => {
-      await ensureLibs();               // A‑Frame → AR.js を fetch+eval でロード
-      mountScene({ useHiro: USE_HIRO }); // シーンを挿入
-      console.log('[ready] シーン挿入完了。カメラ許可後、マーカーをかざしてください。');
-    })().catch(err => {
-      console.error(err);
-      alert('読み込みに失敗しました。コンソールのエラーをご確認ください。');
-    });
+      await ensureLibs();
+      mountScene({ useHiro: USE_HIRO });
+      console.log('[ready] シーン挿入完了。カメラ許可後にマーカーをかざしてください。');
+    })().catch(err => { console.error(err); alert('読み込み失敗。コンソールをご確認ください。'); });
   </script>
 </body>
 </html>
