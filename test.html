@@ -4,66 +4,95 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + A‑Frame 完全版（fetch+eval / 自動フォールバック）</title>
-  <style>body{margin:0;overflow:hidden}</style>
+  <title>AR.js + A‑Frame 完全版（eval不要・診断付き）</title>
+  <style>
+    body { margin:0; overflow:hidden; background:#000; }
+    #hud {
+      position:fixed; top:8px; left:8px; z-index:9999;
+      font: 12px/1.5 monospace; color:#0f0; background:rgba(0,0,0,.6);
+      border:1px solid #0f0; padding:8px 10px; max-width:90vw; white-space:pre-wrap;
+    }
+    #hud .bad { color:#ff8080; }
+    #hud .ok  { color:#80ff80; }
+  </style>
 </head>
 <body>
+  <div id="hud">booting…</div>
   <div id="app"></div>
 
   <script>
-    // ===== 設定 =====
+    // ===== 設定（あなたの配置に合わせてパスは絶対で） =====
     const PATHS = {
-      // ① A‑Frame（THREE を含む）
-      AFRAME: '/ardemo/aframe.min.js',
-      // ② AR.js three コア（THREEx / jsartoolkit）
-      CORE:   '/ardemo/ar-threex.js',
-      // ③ A‑Frameブリッジ（AR.js の A‑Frame 実装）
-      ARJS:   '/ardemo/aframe-ar.js',
-
-      // 独自パターンへの切替時に使用する .patt
+      AFRAME: '/ardemo/aframe.min.js',    // ① A‑Frame（THREE を含む）
+      CORE:   '/ardemo/ar-threex.js',     // ② AR.js three コア（THREEx / jsartoolkit）
+      ARJS:   '/ardemo/aframe-ar.js',     // ③ A‑Frameブリッジ
       PATT:   '/ardemo/markers/yourmarker.patt'
     };
+    const USE_HIRO = true; // まずは Hiro で映るか確認。映ったら false にして pattern へ
 
-    // まずは Hiro で起動確認（true）→ 映ったら false にして pattern .patt へ
-    const USE_HIRO = true;
+    // ===== 画面にログ出す（沈黙対策） =====
+    const hud = document.getElementById('hud');
+    const log = (...a) => { console.log(...a); hud.textContent += '\n' + a.map(x => String(x)).join(' '); };
+    const showErr = (e) => { const msg = (e && e.message) ? e.message : e; log('ERROR:', msg); hud.innerHTML += '\n<span class="bad">ERROR: '+msg+'</span>'; };
+    window.addEventListener('error', e => showErr(e.error || e.message));
+    window.addEventListener('unhandledrejection', e => showErr(e.reason || e));
 
-    // ===== 2重起動防止 =====
-    if (window.__ar_loader_started__) { console.warn('Loader already started.'); }
-    else { window.__ar_loader_started__ = true; }
-
-    // ===== fetch → eval（順序保証付き） =====
-    async function loadTextAndEval(url) {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`Fetch failed: ${url} (${res.status})`);
-      const text = await res.text();
-      (0, eval)(text); // グローバルに評価
-      console.log('[eval loaded]', url);
+    // ===== 動的 <script> で順次ロード（eval 不要） =====
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = false; // 順序厳守
+        s.onload = () => { log('[loaded]', src); resolve(); };
+        s.onerror = () => reject(new Error('Script load failed: '+src));
+        document.head.appendChild(s);
+      });
     }
 
-    // ===== ライブラリ読込（AFRAME → CORE → ARJS） =====
+    // ===== ライブラリ読込：A‑Frame → コア → ブリッジ =====
     async function ensureLibs() {
-      // ★ 正しい順序：AFRAME → CORE → ARJS
-      if (!window.AFRAME) await loadTextAndEval(PATHS.AFRAME); // THREE が載る
-      console.log('THREE exists after AFRAME?', !!window.THREE);
+      log('boot: start');
+      await loadScript(PATHS.AFRAME);   // THREE が載る
+      log('AFRAME?', !!window.AFRAME, 'THREE?', !!window.THREE);
 
-      if (!window.THREEx) await loadTextAndEval(PATHS.CORE);   // コア（THREEx / jsartoolkit）
-      await loadTextAndEval(PATHS.ARJS);                       // ブリッジ（名称はビルド差あり）
+      await loadScript(PATHS.CORE);     // THREEx / jsartoolkit
+      log('THREEx?', !!window.THREEx);
 
-      // 診断ログ
-      console.log('AFRAME defined?', !!window.AFRAME);
-      console.log('THREE exists?', !!window.THREE);
-      console.log('THREEx exists?', !!window.THREEx);
-
-      // どの名称が登録されたかを判定（arjs / artoolkit）
-      const hasArjs       = !!AFRAME.components?.arjs;
-      const hasArtoolkit  = !!AFRAME.components?.artoolkit;
-      console.log('AR.js component (arjs)?', hasArjs);
-      console.log('AR.js component (artoolkit)?', hasArtoolkit);
-
-      if (!hasArjs && !hasArtoolkit) {
-        // ここで失敗なら、aframe-ar.js のビルド／保存が壊れている可能性
-        throw new Error('AR.js A‑Frameブリッジの登録に失敗（ビルド/保存/パスを確認）');
-      }
-      return { hasArjs, hasArtoolkit };
+      await loadScript(PATHS.ARJS);     // A‑Frameブリッジ（名称差に対応）
+      const hasArjs      = !!AFRAME?.components?.arjs;
+      const hasArtoolkit = !!AFRAME?.components?.artoolkit;
+      log('components:', Object.keys(AFRAME.components || {}).slice(0, 20).join(', '));
+      log('arjs?', hasArjs, 'artoolkit?', hasArtoolkit);
+      if (!hasArjs && !hasArtoolkit) throw new Error('A‑Frameブリッジの登録に失敗（aframe-ar.js を再取得/保存）');
+      return hasArjs ? 'arjs' : 'artoolkit';
     }
+
+    // ===== シーン挿入（Hiro ↔ pattern、属性名は自動選択） =====
+    function mountScene(attrName) {
+      log('[attr to use]', attrName);
+      const sceneHiro = `
+        <a-scene embedded ${attrName}>
+          <a-box position="0 0.5 0" material="opacity:0.7; color:#4CC3D9"></a-box>
+          <a-marker-camera preset="hiro"></a-marker-camera>
+        </a-scene>`;
+      const scenePattern = `
+        <a-scene embedded ${attrName}>
+          <a-marker type="pattern" url="${PATHS.PATT}" emitevents="true">
+            <a-box position="0 0.5 0" material="opacity:0.9; color:#EF2D5E"></a-box>
+          </a-marker>
+          <a-entity camera></a-entity>
+        </a-scene>`;
+      document.getElementById('app').innerHTML = (USE_HIRO ? sceneHiro : scenePattern);
+      log('[ready] scene mounted. allow camera & show marker.');
+      hud.classList.add('ok'); // 目視で成功色
+    }
+
+    // ===== 起動 =====
+    (async () => {
+      const attr = await ensureLibs();
+      mountScene(attr);
+    })().catch(showErr);
+  </script>
+</body>
+</html>
+
 
