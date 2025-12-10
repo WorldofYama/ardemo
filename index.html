@@ -2,17 +2,65 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>A-Frame Quick Check</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  aframe.min.js</script>
-  <style> html, body { margin:0; height:100%; } </style>
+  <meta charset="utf-8" />
+  <title>Marker AR 完全版（ローカルのみ）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin:0; padding:0; background:#000; color:#fff; font-family:system-ui, sans-serif; }
+    #ui { position:fixed; left:0; right:0; top:0; z-index:1000; padding:8px 12px; background:rgba(0,0,0,0.55); }
+    #log { font-size:12px; white-space:pre-wrap; max-height:36vh; overflow:auto; margin-top:6px; }
+    #start { margin-top:8px; padding:8px 12px; background:#1e90ff; color:#fff; border:none; border-radius:6px; }
+    #hint { position:fixed; left:0; right:0; bottom:0; padding:8px 12px; font-size:14px; background:rgba(0,0,0,0.45); z-index:1000; }
+  </style>
 </head>
 <body>
-  <a-scene embedded>
-    <a-entity camera position="0 1.6 0"></a-entity>
-    <a-box position="0 1 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
-    <a-sky color="#ECECEC"></a-sky>
-  </a-scene>
-</body>
-</html>
+  <div id="ui">
+    <div>ローカルJS（<strong>arjs-core.min.js / aframe.min.js / aframe-ar.js</strong>）を <strong>fetch + eval</strong> で読み込みます。</div>
+    <button id="start">AR開始（カメラ許可が必要）</button>
+    <div id="log"></div>
+  </div>
+  <div id="hint">
+    まずは <strong>hiro.patt</strong> で起動確認 → OKなら <strong>arrow / cube / warning</strong> に切替。
+    黒画面の場合は上の「AR開始」で権限許可してください。
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const log = (m) => { console.log(m); logEl.textContent += m + '\n'; };
+
+    async function loadJS(url){
+      log('fetch: ' + url);
+      const res = await fetch(url, {cache: 'no-store'});
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + url);
+      const code = await res.text();
+      try { (1, eval)(code); log('eval OK: ' + url); }
+      catch(e){ log('eval ERROR: ' + e.message); throw e; }
+    }
+
+    // === ローダー（順番：Three版コア → A‑Frame → ブリッジ） ===
+    (async () => {
+      try {
+        await loadJS('arjs-core.min.js');  // THREEx.* を提供（AR.js three.js core）
+        log('THREEx exists? ' + (typeof THREEx !== 'undefined'));
+
+        await loadJS('aframe.min.js');     // A‑Frame 本体
+        log('AFRAME defined? ' + (typeof AFRAME !== 'undefined') + ' ' + (AFRAME && AFRAME.version ? ('v' + AFRAME.version) : ''));
+
+        await loadJS('aframe-ar.js');      // A‑Frameブリッジ（シム）
+        const hasArjs = !!AFRAME.components && !!AFRAME.components['arjs'];
+        log('AR.js (arjs component) loaded? ' + hasArjs);
+      } catch (e) {
+        log('loader failed: ' + e);
+      }
+    })();
+
+    // === ユーザー操作と権限に紐づけて起動（iOS/Safariでも安定） ===
+    document.getElementById('start').addEventListener('click', async () => {
+      try {
+        // 権限プリフライト（失敗原因の切り分け）
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try { await navigator.mediaDevices.getUserMedia({ video:true }); log('getUserMedia preflight OK'); }
+          catch(err) { log('Camera permission error: ' + (err && err.name ? err.name : err)); }
+        }
+
+
