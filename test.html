@@ -2,98 +2,49 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + A‑Frame（1.0.4 × 1.5.5：完全版）</title>
-  <style>
-    body { margin:0; overflow:hidden; background:#000; }
-    #hud { position:fixed; top:8px; left:8px; z-index:9999;
-      font:12px/1.5 monospace; color:#0f0; background:rgba(0,0,0,.6);
-      border:1px solid #0f0; padding:8px 10px; max-width:90vw; white-space:pre-wrap; }
-    #hud .bad{color:#ff8080} #hud .ok{color:#80ff80}
-  </style>
+<meta charset="utf-8">
+<title>AR.js A‑Frame ローカル完全版</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- ローカル絶対パスで参照 -->
+/ardemo/aframe.min.js</script>
+/ardemo/ar-threex.js</script>
+<script srcame-ar.js</script>
+<style>
+body {margin:0;overflow:hidden;font-family:sans-serif;}
+#hud {background:#111;color:#0f0;padding:8px;white-space:pre;}
+</style>
 </head>
 <body>
-  <div id="hud">booting…</div><div id="app"></div>
-
-  <script>
-  const PATHS = {
-    // ★Known-Good Stack（古典の安定構成）
-    AFRAME: '/ardemo/aframe.min.js',     // A‑Frame 1.0.4
-    CORE:   '/ardemo/ar-threex.js',      // AR.js threeコア 1.5.5
-    ARJS:   '/ardemo/aframe-ar.js',      // A‑Frameブリッジ 1.5.5
-    PATT:   '/ardemo/markers/yourmarker.patt'
-  };
-  const USE_HIRO = true;   // 映ったら false にして pattern へ
-
-  const hud = document.getElementById('hud');
-  const log = (...a)=>{console.log(...a);hud.textContent+='\n'+a.map(x=>String(x)).join(' ')};
-  const err = (e)=>{const m=(e&&e.message)||e;console.error(e);hud.innerHTML+='\n<span class="bad">ERROR: '+m+'</span>'};
-  window.addEventListener('error',e=>err(e.error||e.message));
-  window.addEventListener('unhandledrejection',e=>err(e.reason||e));
-
-  function loadScript(src){
-    return new Promise((res,rej)=>{
-      const s=document.createElement('script');s.src=src;s.async=false;
-      s.onload=()=>{log('[loaded]',src);res()}; s.onerror=()=>rej(new Error('Script load failed: '+src));
-      document.head.appendChild(s);
-    });
-  }
-
-  async function ensureLibs(){
-    log('boot: start');
-    // 順序厳守：A‑Frame → threeコア → A‑Frameブリッジ
-    await loadScript(PATHS.AFRAME);
-    log('AFRAME?',!!window.AFRAME,'THREE?',!!window.THREE);
-
-    await loadScript(PATHS.CORE);
-    log('THREEx?',!!window.THREEx);
-
-    await loadScript(PATHS.ARJS);
-
-    // どの名称で登録されたか（arjs / artoolkit）を判定
-    const hasArjs = !!AFRAME?.components?.arjs;
-    const hasArtk = !!AFRAME?.components?.artoolkit;
-    log('arjs?',hasArjs,'artoolkit?',hasArtk);
-    if(!hasArjs && !hasArtk){
-      throw new Error('A‑Frameブリッジの登録に失敗（aframe-ar.js を再取得/保存）');
-    }
-    return hasArjs ? 'arjs' : 'artoolkit';
-  }
-
-  function mountScene(attrName){
-    log('[attr to use]',attrName);
-    const hiro = `
-      <a-scene embedded ${attrName}>
-        <a-box position="0 0.5 0" material="opacity:0.7; color:#4CC3D9"></a-box>
-        <a-marker-camera preset="hiro"></a-marker-camera>
-      </a-scene>`;
-    const patt = `
-      <a-scene embedded ${attrName}>
-        <a-marker type="pattern" url="${PATHS.PATT}" emitevents="true">
-          <a-box position="0 0.5 0" material="opacity:0.9; color:#EF2D5E"></a-box>
-        </a-marker>
-        <a-entity camera></a-entity>
-      </a-scene>`;
-    document.getElementById('app').innerHTML = USE_HIRO ? hiro : patt;
-    log('[ready] scene mounted. allow camera & show marker.'); hud.classList.add('ok');
-  }
-
-  (async()=>{ const attr = await ensureLibs(); mountScene(attr); })().catch(err);
-  </script>
-  
+<pre id="hud"></pre>
 <script>
-(async () => {
-  const u = '/ardemo/aframe-ar.js';
-  const t = await (await fetch(u, {cache:'no-store'})).text();
-  // 先頭と、登録コードの有無をチェック
-  console.log('aframe-ar.js first 200 chars:\n', t.slice(0, 200));
-  console.log('contains AFRAME.registerComponent("arjs")?', t.includes("AFRAME.registerComponent('arjs"));
-  console.log('contains AFRAME.registerComponent("artoolkit")?', t.includes("AFRAME.registerComponent('artoolkit"));
-  console.log('file length:', t.length);
-})();
-</script>
+const hud = s => document.getElementById('hud').textContent += s + '\n';
+hud('[check] AFRAME defined? ' + !!window.AFRAME);
+hud('[check] THREE exists? ' + !!window.THREE);
+const comps = (AFRAME && AFRAME.components) || {};
+hud('arjs? ' + !!comps['arjs'] + ' / artoolkit? ' + !!comps['artoolkit']);
 
+const scene = document.createElement('a-scene');
+scene.setAttribute('embedded','');
+if (comps['arjs']) scene.setAttribute('arjs','sourceType: webcam');
+else if (comps['artoolkit']) scene.setAttribute('artoolkit','');
+else hud('[fatal] ブリッジ未登録（aframe-ar.jsのロード/実行に問題）');
+
+const markerCam = document.createElement('a-marker-camera');
+markerCam.setAttribute('preset','hiro');
+scene.appendChild(markerCam);
+
+const box = document.createElement('a-box');
+box.setAttribute('position','0 0.5 0');
+box.setAttribute('color','#4CC3D9');
+scene.appendChild(box);
+
+const camEntity = document.createElement('a-entity');
+camEntity.setAttribute('camera','');
+scene.appendChild(camEntity);
+
+document.body.appendChild(scene);
+</script>
 </body>
 </html>
+
 
