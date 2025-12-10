@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + A‑Frame（3ファイル方式 / fetch+eval）</title>
+  <title>AR.js + A‑Frame（順序修正）</title>
   <style>body{margin:0;overflow:hidden}</style>
 </head>
 <body>
@@ -12,12 +12,12 @@
 
   <script>
     const PATHS = {
-      CORE:   '/ardemo/ar-threex.js',   // ① AR.js threeコア
-      AFRAME: '/ardemo/aframe.min.js',  // ② A‑Frame
-      ARJS:   '/ardemo/aframe-ar.js',   // ③ A‑Frameブリッジ
+      AFRAME: '/ardemo/aframe.min.js',   // ① A‑Frame（THREEを含む）
+      CORE:   '/ardemo/ar-threex.js',    // ② AR.js threeコア（THREEx / jsartoolkit）
+      ARJS:   '/ardemo/aframe-ar.js',    // ③ A‑Frameブリッジ（arjsコンポーネント登録）
       PATT:   '/ardemo/markers/yourmarker.patt'
     };
-    const USE_HIRO = true; // まずは Hiro で起動確認
+    const USE_HIRO = true;
 
     if (window.__ar_loader_started__) { console.warn('Loader already started.'); }
     else { window.__ar_loader_started__ = true; }
@@ -31,16 +31,20 @@
     }
 
     async function ensureLibs() {
-      // ★ 順序が肝心：① コア → ② A‑Frame → ③ ブリッジ
-      if (!window.THREEx) await loadTextAndEval(PATHS.CORE);
-      if (!window.AFRAME) await loadTextAndEval(PATHS.AFRAME);
-      if (!AFRAME?.components?.arjs) await loadTextAndEval(PATHS.ARJS);
+      // ★ 正しい順序：AFRAME → CORE → ARJS
+      if (!window.AFRAME) await loadTextAndEval(PATHS.AFRAME); // THREE が載る
+      console.log('THREE exists after AFRAME?', !!window.THREE);
 
-      console.log('THREEx exists?', !!window.THREEx);
+      if (!window.THREEx) await loadTextAndEval(PATHS.CORE);   // コア（THREEx/jsartoolkit）
+      if (!AFRAME?.components?.arjs) await loadTextAndEval(PATHS.ARJS); // ブリッジ
+
       console.log('AFRAME defined?', !!window.AFRAME);
+      console.log('THREE exists?', !!window.THREE);
+      console.log('THREEx exists?', !!window.THREEx);
       console.log('AR.js component exists?', !!AFRAME.components['arjs']);
-      if (!window.THREEx || !window.AFRAME || !AFRAME.components['arjs']) {
-        throw new Error('AR.js / A‑Frame のロードに失敗しました（順序 or ファイル内容を再確認）');
+
+      if (!window.AFRAME || !window.THREE || !window.THREEx || !AFRAME.components['arjs']) {
+        throw new Error('ライブラリのロードに失敗（順序/ファイル内容/保存ミスを確認）');
       }
     }
 
