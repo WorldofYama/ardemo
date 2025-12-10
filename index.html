@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>AR.js Hiro Marker (Edge + GitHub Pages, No CDN)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style> body { margin: 0; overflow: hidden; } </style>
+  <!-- 外部CDN禁止：自前ライブラリのみ -->
+  <script src="./libs/three.min.js"></script>
+  <script src="./libs/ar.js"></script>
+</head>
+<body>
+<script>
+  // ===== Three.js 基本セットアップ =====
+  const scene = new THREE.Scene();
+  const camera = new THREE.Camera();
+  scene.add(camera);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.domElement.style.position = 'absolute';
+  renderer.domElement.style.top = '0px';
+  renderer.domElement.style.left = '0px';
+  document.body.appendChild(renderer.domElement);
+
+  // ===== AR.js ソース（Webカメラ） =====
+  const arSource = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+  function onResize(){
+    arSource.onResizeElement();
+    arSource.copyElementSizeTo(renderer.domElement);
+    if (arContext && arContext.arController) {
+      arSource.copyElementSizeTo(arContext.arController.canvas);
+    }
+  }
+  arSource.init(function(){ onResize(); });
+  window.addEventListener('resize', onResize);
+
+  // ===== AR.js コンテキスト =====
+  const arContext = new THREEx.ArToolkitContext({
+    cameraParametersUrl: './libs/data/camera_para.dat',
+    detectionMode: 'mono'
+  });
+
+  arContext.init(function(){
+    // Three.js カメラに投影行列をコピー
+    camera.projectionMatrix.copy(arContext.getProjectionMatrix());
+  });
+
+  // ===== マーカー（hiro） =====
+  const markerRoot = new THREE.Group();
+  scene.add(markerRoot);
+  const markerControls = new THREEx.ArMarkerControls(arContext, markerRoot, {
+    type: 'pattern',
+    patternUrl: './assets/patt.hiro'
+  });
+
+  // ===== オブジェクト（三角錐） =====
+  const geometry = new THREE.ConeGeometry(0.5, 1, 4);
+  const material = new THREE.MeshNormalMaterial();
+  const cone = new THREE.Mesh(geometry, material);
+  cone.position.y = 0.5; // マーカー面から少し上げる
+  markerRoot.add(cone);
+
+  // ===== レンダリングループ =====
+  function animate(){
+    requestAnimationFrame(animate);
+    if (arSource.ready) arContext.update(arSource.domElement);
+    cone.rotation.y += 0.01;
+    renderer.render(scene, camera);
+  }
+  animate();
+</script>
+</body>
+</html>
