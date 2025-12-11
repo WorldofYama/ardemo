@@ -6,99 +6,111 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AR.js Hiro Marker Demo (Edge + GitHub Pages)</title>
   <style>
-    /* 画面全体をレンダリングに使用 */
     html, body { height: 100%; margin: 0; }
     body { overflow: hidden; background: #000; }
-    /* ローディングなどを置く場合はここに */
+    /* 画面左上に状態チェックを表示（デバッグ用） */
+    #status {
+      position: fixed; top: 8px; left: 8px; z-index: 9999;
+      color: #0f0; font: 12px/1.4 Consolas, monospace;
+      background: rgba(0,0,0,.6); padding: 6px 8px; border-radius: 4px;
+    }
   </style>
 
-  <!-- ★ 1) three.js（UMD版。例：r128） -->
-  <!-- ※ ここで "type" / "defer" / "async" は付けないこと -->
+  <!-- ★ three.js（UMD版。例：r128）。属性は付けない -->
   ./libs/three.min.js</script>
 
-  <!-- ★ 2) AR.js（three.js版ビルド：THREEx.* を含む） -->
-  <!-- ※ ここでも "type" / "defer" / "async" は付けないこと -->
+  <!-- ★ AR.js（three版ビルド：THREEx.* を含む）。属性は付けない -->
   ./libs/ar.js</script>
 </head>
 <body>
+<div id="status">loading…</div>
+
 <script>
-  // ===== 3) あなたの初期化コード（ここで THREEx.* が使える） =====
-
-  // --- Three.js 基本セットアップ ---
-  const scene = new THREE.Scene();
-  const camera = new THREE.Camera(); // AR.js用のシンプルカメラ
-  scene.add(camera);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setClearColor(0x000000, 0); // 背景透過
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.domElement.style.position = 'absolute';
-  renderer.domElement.style.top = '0';
-  renderer.domElement.style.left = '0';
-  document.body.appendChild(renderer.domElement);
-
-  // --- Webカメラ入力（ArToolkitSource） ---
-  const arSource = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
-
-  function onResize() {
-    arSource.onResizeElement();                    // 入力のサイズ調整
-    arSource.copyElementSizeTo(renderer.domElement); // 出力canvasに反映
-    if (arContext && arContext.arController) {
-      arSource.copyElementSizeTo(arContext.arController.canvas); // 内部canvasにも反映
+  // ====== ロード確認（ここで失敗なら <script> かファイル種別が不正） ======
+  (function checkGlobals(){
+    const s = document.getElementById('status');
+    const t = typeof THREE;
+    const x = typeof THREEx;
+    s.textContent = `THREE: ${t} / THREEx: ${x}`;
+    if(t !== 'object' || x !== 'object'){
+      s.style.color = '#f66';
+      s.textContent += '  ← NG（three.min.js/AR.jsの種類 or <script> 記述を確認）';
+      console.error('THREE/THREEx 未定義。UMD版 three.min.js（例：r128）＆ three版 ar.js を使用し、<script>に type/defer/async を付けないでください。');
+      return;
     }
-  }
-  arSource.init(() => onResize());                 // 初期化後にリサイズ実行
-  window.addEventListener('resize', onResize);     // 画面リサイズ対応
-
-  // --- 検出コンテキスト（ArToolkitContext） ---
-  const arContext = new THREEx.ArToolkitContext({
-    cameraParametersUrl: './libs/data/camera_para.dat', // 相対パス（固定）
-    detectionMode: 'mono'                                // モノクロ検出
-    // ※ オリジナルのパターンを作った場合は patternRatio を適宜設定
-    // patternRatio: 0.5 など
-  });
-
-  arContext.init(() => {
-    // Three.js カメラへ投影行列を適用（これで3D空間が実世界の視点に合う）
-    camera.projectionMatrix.copy(arContext.getProjectionMatrix());
-  });
-
-  // --- マーカー（hiro） ---
-  const markerRoot = new THREE.Group();
-  scene.add(markerRoot);
-
-  // hiro の .patt を assets/patt.hiro に配置している前提
-  const markerControls = new THREEx.ArMarkerControls(arContext, markerRoot, {
-    type: 'pattern',
-    patternUrl: './assets/patt.hiro' // 相対パス（固定）
-  });
-
-  // --- 表示オブジェクト（三角錐） ---
-  const geometry = new THREE.ConeGeometry(0.5, 1, 4); // 半径0.5, 高さ1, 4角錐
-  const material = new THREE.MeshNormalMaterial();
-  const cone = new THREE.Mesh(geometry, material);
-  cone.position.y = 0.5; // マーカー面から少し上げる
-  markerRoot.add(cone);
-
-  // --- レンダリングループ ---
-  (function animate() {
-    requestAnimationFrame(animate);
-
-    // Webカメラのフレームが準備できていれば、コンテキストを更新
-    if (arSource.ready) {
-      arContext.update(arSource.domElement);
-    }
-
-    // 軽いアニメーション（回転）
-    cone.rotation.y += 0.01;
-
-    renderer.render(scene, camera);
   })();
 
-  // --- 予防的なログ（開発時の確認に便利） ---
-  // Console で 'object' が返ればロードOK
-  // console.log('typeof THREE =', typeof THREE);
-  // console.log('typeof THREEx =', typeof THREEx);
+  // ====== ここから本処理（THREE/THREEx が object のときのみ実行） ======
+  (function run(){
+    if (typeof THREE !== 'object' || typeof THREEx !== 'object') return;
+
+    // --- Three.js 基本セットアップ ---
+    const scene  = new THREE.Scene();
+    const camera = new THREE.Camera(); // AR.js 用のカメラ
+    scene.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearColor(0x000000, 0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
+    document.body.appendChild(renderer.domElement);
+
+    // --- Webカメラ入力 ---
+    const arSource = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+
+    function onResize(){
+      arSource.onResizeElement();
+      arSource.copyElementSizeTo(renderer.domElement);
+      if (arContext && arContext.arController){
+        arSource.copyElementSizeTo(arContext.arController.canvas);
+      }
+    }
+    arSource.init(() => onResize());
+    window.addEventListener('resize', onResize);
+
+    // --- 検出コンテキスト ---
+    const arContext = new THREEx.ArToolkitContext({
+      cameraParametersUrl: './libs/data/camera_para.dat', // 相対固定
+      detectionMode: 'mono'
+      // ※ オリジナルパターンを作った場合は patternRatio を設定（例：0.5）
+      // patternRatio: 0.5
+    });
+
+    arContext.init(() => {
+      camera.projectionMatrix.copy(arContext.getProjectionMatrix());
+    });
+
+    // --- マーカー（hiro） ---
+    const markerRoot = new THREE.Group();
+    scene.add(markerRoot);
+
+    const markerControls = new THREEx.ArMarkerControls(arContext, markerRoot, {
+      type: 'pattern',
+      patternUrl: './assets/patt.hiro' // ここも相対固定
+    });
+
+    // --- 表示オブジェクト（三角錐） ---
+    const geometry = new THREE.ConeGeometry(0.5, 1, 4); // 半径0.5, 高さ1, 4角錐
+    const material = new THREE.MeshNormalMaterial();
+    const cone     = new THREE.Mesh(geometry, material);
+    cone.position.y = 0.5;
+    markerRoot.add(cone);
+
+    // --- レンダリングループ ---
+    (function animate(){
+      requestAnimationFrame(animate);
+      if (arSource.ready) arContext.update(arSource.domElement);
+      cone.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    })();
+
+    // --- ロードOK表示 ---
+    const s = document.getElementById('status');
+    s.style.color = '#0f0';
+    s.textContent = 'ready (THREE/THREEx OK)';
+  })();
 </script>
 </body>
 </html>
