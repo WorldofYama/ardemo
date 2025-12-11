@@ -10,59 +10,95 @@
   <script src="./vendor/aframe-v1.7.1.min.js"></script>
   <script src="./vendor/aframe-ar.js"></script>
 
+
   <style>
     html,body { margin:0; padding:0; height:100%; overflow:hidden; }
     .hint { position:fixed; left:8px; bottom:8px; background:#0008; color:#fff;
             padding:8px 10px; border-radius:6px; font-size:14px; }
   </style>
+
+  <!-- 矢印を「マーカー→カメラ」線に直角に向けるコンポーネント -->
+  <script>
+    AFRAME.registerComponent('orient-perp-to-camera', {
+      schema: { axis: {default: 'y'} }, // 水平面XZでの回転（Y軸回り）
+
+      init() {
+        this.cameraEl = this.el.sceneEl.camera.el; // <a-entity camera>
+        this.tempWorldCam = new THREE.Vector3();
+        this.tempLocalCam = new THREE.Vector3();
+      },
+
+      tick() {
+        const markerObj = this.el.object3D;
+        if (!this.cameraEl || !markerObj) return;
+
+        // カメラのワールド座標
+        this.tempWorldCam.setFromMatrixPosition(this.cameraEl.object3D.matrixWorld);
+
+        // マーカーローカル座標へ変換（＝マーカー原点から見たカメラ位置）
+        markerObj.worldToLocal(this.tempLocalCam.copy(this.tempWorldCam));
+
+        // XZ平面の角度（マーカー→カメラの方位角）
+        const theta = Math.atan2(this.tempLocalCam.z, this.tempLocalCam.x); // [-pi,pi]
+
+        // 直角方向（＋90度）に矢印の向きを設定
+        const perp = theta + Math.PI / 2;
+
+        // A-Frameのrotationは度数法
+        const deg = -THREE.MathUtils.radToDeg(perp); // 矢印の正面が+Xとして想定
+        const current = this.el.getAttribute('rotation') || {x:0,y:0,z:0};
+        this.el.setAttribute('rotation', {x: current.x, y: deg, z: current.z});
+      }
+    });
+  </script>
 </head>
 <body>
-  <!-- A-Frame + AR.js シーン -->
   <a-scene
     embedded
     arjs="sourceType: webcam; debugUIEnabled: false;"
     vr-mode-ui="enabled: false"
     renderer="logarithmicDepthBuffer: true"
   >
-    <!-- ほんの少しライティング（見やすさ用） -->
+    <!-- ライティング少し -->
     <a-entity light="type: ambient; color: #BBB"></a-entity>
     <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
 
-    <!-- ===== 1) arrow.patt：3D矢印（円柱シャフト＋円錐ヘッド） ===== -->
+    <!-- ===== 1) arrow.patt：矢印（15cm浮かせ＆直角向き） ===== -->
     <a-marker type="pattern" url="./assets/arrow.patt">
-      <!-- シャフト（円柱） -->
-      <a-cylinder position="0 0.35 0" radius="0.08" height="0.7" color="#1E90FF"></a-cylinder>
-      <!-- ヘッド（円錐） 上部に配置 -->
-      <a-cone position="0 0.9 0" radius-bottom="0.18" height="0.36" color="#1E90FF"></a-cone>
-      <!-- 方向を変えたい場合は rotation を調整（例：X軸に寝かせる） -->
-      <!-- 例） <a-entity rotation="0 0 90"> の中にまとめて入れる でもOK -->
-      <a-text value="Arrow" position="-0.6 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      <!-- まとめて 15cm (0.15) 浮かせる -->
+      <a-entity position="0 0.15 0" orient-perp-to-camera>
+        <!-- 矢印：シャフト＋ヘッド。矢印の「正面」を+X方向として組む -->
+        <a-cylinder position="0 0.35 0" radius="0.08" height="0.7" color="#1E90FF"></a-cylinder>
+        <a-cone position="0 0.9 0" radius-bottom="0.18" height="0.36" color="#1E90FF"></a-cone>
+        <a-text value="Arrow" position="-0.6 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      </a-entity>
     </a-marker>
 
-    <!-- ===== 2) cube.patt：半透明キューブ ===== -->
+    <!-- ===== 2) cube.patt：半透明キューブ（15cm浮かせ） ===== -->
     <a-marker type="pattern" url="./assets/cube.patt">
-      <a-box position="0 0.5 0" depth="1" height="1" width="1"
-             material="color: #00CC88; opacity: 0.5; transparent: true; metalness:0.1; roughness:0.8">
-      </a-box>
-      <!-- 輪郭を少し見やすくするためにワイヤーフレーム的枠（薄い線） -->
-      <a-box position="0 0.5 0" depth="1.01" height="1.01" width="1.01"
-             material="color: #004433; opacity: 0.18; transparent: true">
-      </a-box>
-      <a-text value="Cube (透明)" position="-0.8 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      <a-entity position="0 0.15 0">
+        <a-box position="0 0.5 0" depth="1" height="1" width="1"
+               material="color: #00CC88; opacity: 0.5; transparent: true; metalness:0.1; roughness:0.8">
+        </a-box>
+        <!-- 輪郭の補助 -->
+        <a-box position="0 0.5 0" depth="1.01" height="1.01" width="1.01"
+               material="color: #004433; opacity: 0.18; transparent: true">
+        </a-box>
+        <a-text value="Cube (透明)" position="-0.8 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      </a-entity>
     </a-marker>
 
-    <!-- ===== 3) warning.patt：警告（三角＋「！」） ===== -->
+    <!-- ===== 3) warning.patt：警告（三角＋「！」）（15cm浮かせ） ===== -->
     <a-marker type="pattern" url="./assets/warning.patt">
-      <!-- 三角形の見た目は円錐を使って表現（標識風） -->
-      <a-cone position="0 0.6 0" radius-bottom="0.6" height="1.2"
-              material="color: #FFCC00; metalness:0.05; roughness:0.9"></a-cone>
-      <!-- 「！」の文字（真正面から読めるように下向きに回転） -->
-      <a-text value="!" position="-0.1 0.55 0.01" rotation="-90 0 0"
-              color="#000" width="1.2"></a-text>
-      <!-- 影の台座（薄い円） -->
-      <a-cylinder position="0 0.02 0" radius="0.62" height="0.02"
-                  material="color: #333; opacity: 0.25; transparent: true"></a-cylinder>
-      <a-text value="Warning" position="-0.8 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      <a-entity position="0 0.15 0">
+        <a-cone position="0 0.6 0" radius-bottom="0.6" height="1.2"
+                material="color: #FFCC00; metalness:0.05; roughness:0.9"></a-cone>
+        <a-text value="!" position="-0.1 0.55 0.01" rotation="-90 0 0"
+                color="#000" width="1.2"></a-text>
+        <a-cylinder position="0 0.02 0" radius="0.62" height="0.02"
+                    material="color: #333; opacity: 0.25; transparent: true"></a-cylinder>
+        <a-text value="Warning" position="-0.8 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      </a-entity>
     </a-marker>
 
     <!-- カメラ -->
@@ -70,8 +106,8 @@
   </a-scene>
 
   <div class="hint">
-    3つのオリジナルマーカーを用意：arrow.patt / cube.patt / warning.patt<br/>
-    それぞれのマーカーにカメラを向けると対応の3Dが表示されます
+    すべてのオブジェクトをマーカー面から約15cm上に配置しています。<br/>
+    矢印は「マーカーから見たカメラ方向」に対して直角になるよう自動で向きを更新します。
   </div>
 </body>
 </html>
