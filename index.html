@@ -4,13 +4,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AR.js + Three (Bundled, No CDN)</title>
+  <title>Minimal Loader</title>
   <style>html,body{height:100%;margin:0}body{overflow:hidden;background:#000}</style>
 </head>
 <body>
-  <!-- ここでは ./dist/app.js</script> を直接は書かない -->
+  <!-- この1つの <script> の中で、app.js を後から挿入して読み込む -->
   <script>
-    ./dist/app.js
+    (function(){
+      var s = document.createElement('script');
+      s.src = './app.js';     // ルート直下の app.js を読む（dist/ は使わない）
+      s.async = false;
+      s.onload  = function(){ console.log('app.js loaded'); };
+      s.onerror = function(){ console.error('app.js failed to load'); };
+      document.body.appendChild(s);
+    })();
   </script>
 </body>
 </html>
