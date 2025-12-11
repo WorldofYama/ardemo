@@ -11,46 +11,12 @@
   <script src="./vendor/aframe-ar.js"></script>
 
 
+
   <style>
     html,body { margin:0; padding:0; height:100%; overflow:hidden; }
     .hint { position:fixed; left:8px; bottom:8px; background:#0008; color:#fff;
             padding:8px 10px; border-radius:6px; font-size:14px; }
   </style>
-
-  <!-- 矢印を「マーカー→カメラ」線に直角に向けるコンポーネント -->
-  <script>
-    AFRAME.registerComponent('orient-perp-to-camera', {
-      schema: { axis: {default: 'y'} }, // 水平面XZでの回転（Y軸回り）
-
-      init() {
-        this.cameraEl = this.el.sceneEl.camera.el; // <a-entity camera>
-        this.tempWorldCam = new THREE.Vector3();
-        this.tempLocalCam = new THREE.Vector3();
-      },
-
-      tick() {
-        const markerObj = this.el.object3D;
-        if (!this.cameraEl || !markerObj) return;
-
-        // カメラのワールド座標
-        this.tempWorldCam.setFromMatrixPosition(this.cameraEl.object3D.matrixWorld);
-
-        // マーカーローカル座標へ変換（＝マーカー原点から見たカメラ位置）
-        markerObj.worldToLocal(this.tempLocalCam.copy(this.tempWorldCam));
-
-        // XZ平面の角度（マーカー→カメラの方位角）
-        const theta = Math.atan2(this.tempLocalCam.z, this.tempLocalCam.x); // [-pi,pi]
-
-        // 直角方向（＋90度）に矢印の向きを設定
-        const perp = theta + Math.PI / 2;
-
-        // A-Frameのrotationは度数法
-        const deg = -THREE.MathUtils.radToDeg(perp); // 矢印の正面が+Xとして想定
-        const current = this.el.getAttribute('rotation') || {x:0,y:0,z:0};
-        this.el.setAttribute('rotation', {x: current.x, y: deg, z: current.z});
-      }
-    });
-  </script>
 </head>
 <body>
   <a-scene
@@ -59,44 +25,81 @@
     vr-mode-ui="enabled: false"
     renderer="logarithmicDepthBuffer: true"
   >
-    <!-- ライティング少し -->
+    <!-- ライティング（見やすさ用） -->
     <a-entity light="type: ambient; color: #BBB"></a-entity>
-    <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
+    <a-entity light="type: directional; intensity: 0.9" position="1 2 1"></a-entity>
 
-    <!-- ===== 1) arrow.patt：矢印（15cm浮かせ＆直角向き） ===== -->
+    <!-- =========================
+         1) arrow.patt ：矢印
+         ・Z軸に垂直（XY平面に寝かせる）
+         ・Z方向 +0.15m（約15cm）
+         ・X方向 +0.15m（約15cm）
+       ========================= -->
     <a-marker type="pattern" url="./assets/arrow.patt">
-      <!-- まとめて 15cm (0.15) 浮かせる -->
-      <a-entity position="0 0.15 0" orient-perp-to-camera>
-        <!-- 矢印：シャフト＋ヘッド。矢印の「正面」を+X方向として組む -->
-        <a-cylinder position="0 0.35 0" radius="0.08" height="0.7" color="#1E90FF"></a-cylinder>
-        <a-cone position="0 0.9 0" radius-bottom="0.18" height="0.36" color="#1E90FF"></a-cone>
+      <!-- まとめてオフセット：x=0.15, y=0, z=0.15 -->
+      <a-entity position="0.15 0 0.15">
+        <!-- 矢印の軸は本来Y方向。Z軸に垂直にする＝XY平面に倒す。ここでは +X 方向へ向ける例 -->
+        <!-- Z回りに90度回転で、矢印の軸(Y) を +X に寝かせる -->
+        <a-entity rotation="0 0 90">
+          <!-- シャフト（円柱） -->
+          <a-cylinder position="0 0.35 0" radius="0.08" height="0.7" color="#1E90FF"></a-cylinder>
+          <!-- ヘッド（円錐） -->
+          <a-cone position="0 0.9 0" radius-bottom="0.18" height="0.36" color="#1E90FF"></a-cone>
+        </a-entity>
         <a-text value="Arrow" position="-0.6 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
       </a-entity>
     </a-marker>
 
-    <!-- ===== 2) cube.patt：半透明キューブ（15cm浮かせ） ===== -->
+    <!-- =========================
+         2) cube.patt ：半透明キューブを3つ（色・サイズ違い）
+         ・ラベル A / B / C を表示
+         ・配置は見やすいように少しずつずらす
+       ========================= -->
     <a-marker type="pattern" url="./assets/cube.patt">
-      <a-entity position="0 0.15 0">
-        <a-box position="0 0.5 0" depth="1" height="1" width="1"
-               material="color: #00CC88; opacity: 0.5; transparent: true; metalness:0.1; roughness:0.8">
-        </a-box>
-        <!-- 輪郭の補助 -->
-        <a-box position="0 0.5 0" depth="1.01" height="1.01" width="1.01"
-               material="color: #004433; opacity: 0.18; transparent: true">
-        </a-box>
-        <a-text value="Cube (透明)" position="-0.8 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      <!-- ベース位置を少し前＆右に（同じく x=0.15, z=0.15） -->
+      <a-entity position="0.15 0 0.15">
+        <!-- Cube A（大） -->
+        <a-box position="-0.6 0.5 0" depth="1.0" height="1.0" width="1.0"
+               material="color:#00CC88; opacity:0.50; transparent:true; roughness:0.8"></a-box>
+        <a-text value="A" position="-0.6 1.1 0" rotation="-90 0 0" color="#FFF" width="1.5"></a-text>
+
+        <!-- Cube B（中） -->
+        <a-box position="0 0.4 0.3" depth="0.8" height="0.8" width="0.8"
+               material="color:#3366FF; opacity:0.45; transparent:true; roughness:0.8"></a-box>
+        <a-text value="B" position="0 0.9 0.3" rotation="-90 0 0" color="#FFF" width="1.5"></a-text>
+
+        <!-- Cube C（小） -->
+        <a-box position="0.6 0.3 -0.2" depth="0.6" height="0.6" width="0.6"
+               material="color:#FF6633; opacity:0.40; transparent:true; roughness:0.8"></a-box>
+        <a-text value="C" position="0.6 0.7 -0.2" rotation="-90 0 0" color="#FFF" width="1.5"></a-text>
       </a-entity>
     </a-marker>
 
-    <!-- ===== 3) warning.patt：警告（三角＋「！」）（15cm浮かせ） ===== -->
+    <!-- =========================
+         3) warning.patt ：警告（三角形＋「！」）
+         ・厚みのある黄色い半透明の三角形（立体）
+         ・半透明の黒「！」を内部に配置
+       ========================= -->
     <a-marker type="pattern" url="./assets/warning.patt">
-      <a-entity position="0 0.15 0">
-        <a-cone position="0 0.6 0" radius-bottom="0.6" height="1.2"
-                material="color: #FFCC00; metalness:0.05; roughness:0.9"></a-cone>
-        <a-text value="!" position="-0.1 0.55 0.01" rotation="-90 0 0"
-                color="#000" width="1.2"></a-text>
-        <a-cylinder position="0 0.02 0" radius="0.62" height="0.02"
-                    material="color: #333; opacity: 0.25; transparent: true"></a-cylinder>
+      <!-- ベース位置：x=0.15, z=0.15 -->
+      <a-entity position="0.15 0 0.15">
+        <!-- 三角の立体は tetrahedron（四面体）で表現。少し縦長にして標識っぽく -->
+        <a-entity position="0 0.55 0" scale="1 1.2 0.6">
+          <a-entity geometry="primitive: tetrahedron; radius: 0.7"
+                    material="color:#FFCC00; opacity:0.55; transparent:true; roughness:0.9; metalness:0.05">
+          </a-entity>
+        </a-entity>
+
+        <!-- 「！」は前面方向に少し寄せて、半透明黒で -->
+        <a-text value="!" position="-0.1 0.6 0.15" rotation="-90 0 0"
+                color="#000" width="1.4"
+                material="opacity:0.5; transparent:true">
+        </a-text>
+
+        <!-- 台座の影（薄い円）任意 -->
+        <a-circle position="0 0.02 0" radius="0.6"
+                  material="color:#333; opacity:0.25; transparent:true"></a-circle>
+
         <a-text value="Warning" position="-0.8 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
       </a-entity>
     </a-marker>
@@ -106,8 +109,9 @@
   </a-scene>
 
   <div class="hint">
-    すべてのオブジェクトをマーカー面から約15cm上に配置しています。<br/>
-    矢印は「マーカーから見たカメラ方向」に対して直角になるよう自動で向きを更新します。
+    ・矢印は Z 軸に垂直（XY平面）になるように寝かせ、X/Z に 0.15m オフセット。<br/>
+    ・CUBE は半透明の色違い 3 個（A/B/C）。<br/>
+    ・警告は黄色半透明の三角立体内に、半透明黒の「！」を配置。
   </div>
 </body>
 </html>
