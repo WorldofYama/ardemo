@@ -2,69 +2,40 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>MindAR画像ターゲットARデモ（自前ホスト／明示スタート）</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR.js Hiro Marker Test</title>
 
-  <!-- ローカルJS -->
-  <script src="./libs/aframe.min.js"></script>
-  <script src="./libs/mindar-image-aframe.prod.js"></script>
+  <!-- Three.js と AR.js (aframe版) のCDN -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ar-js@3.4.3/aframe/build/aframe-ar.js"></script>
 
   <style>
-    body { margin: 0; background: #000; }
-    a-scene { width: 100vw; height: 100vh; }
-    #start { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.85); z-index: 10; }
-    #start button { padding: 12px 20px; font-size: 16px; }
+    body, html { margin:0; padding:0; height:100%; overflow:hidden; }
+    .hint { position:fixed; left:8px; bottom:8px; background:#0008; color:#fff; padding:8px 10px; border-radius:6px; font-size:14px; }
   </style>
-
-  <!-- 任意：診断ログ -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('A-Frame loaded?', !!window.AFRAME);
-      console.log('MindAR A-Frame component exists?', !!AFRAME?.components['mindar-image-target']);
-      // MindARイベント監視
-      document.addEventListener('mindar-image-initialized', () => console.log('[mindar] initialized'));
-      document.addEventListener('mindar-image-ready', () => console.log('[mindar] ready'));
-      document.addEventListener('mindar-image-start', () => console.log('[mindar] start'));
-      document.addEventListener('mindar-image-error', (e) => console.error('[mindar] error', e?.detail));
-    });
-  </script>
 </head>
 <body>
-  <!-- 開始ボタン -->
-  <div id="start">
-    <button id="startBtn">カメラを開始</button>
-  </div>
+  <!-- カメラへのアクセス許可が必要。HTTPS必須 -->
+  <a-scene
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false;"
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true"
+  >
+    <!-- Hiro マーカー（プリセット） -->
+    <a-marker preset="hiro">
+      <!-- マーカー上に表示する 3D オブジェクト例 -->
+      <a-box position="0 0.5 0" rotation="0 45 0" color="#4CC3D9" depth="1" height="1" width="1"></a-box>
+      <a-sphere position="0 1.5 0" radius="0.35" color="#EF2D5E"></a-sphere>
+      <a-text value="Hello AR.js" position="-0.8 0.1 0" rotation="-90 0 0" color="#FFF"></a-text>
+    </a-marker>
 
-  <a-scene id="scene"
-           mindar-image="imageTargetSrc: ./targets.mind;"
-           vr-mode-ui="enabled: false"
-           device-orientation-permission-ui="enabled: false">
-    <a-camera look-controls="enabled: false"></a-camera>
-
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-box color="#4CC3D9" position="0 0 0.05" depth="0.1" height="0.1" width="0.1"></a-box>
-    </a-entity>
+    <!-- カメラ設定 -->
+    <a-entity camera></a-entity>
   </a-scene>
 
-  <script>
-    // ユーザー操作後に明示的にシステムを起動
-    document.getElementById('startBtn').addEventListener('click', async () => {
-      document.getElementById('start').style.display = 'none';
-      const sceneEl = document.querySelector('a-scene');
-      // A-Frameのsystem経由でMindARを起動（A-Frame統合版）
-      const mindarSystem = sceneEl.systems['mindar-image-system'] || sceneEl.systems['mindar-image'];
-      try {
-        if (mindarSystem?.start) {
-          console.log('[ui] calling mindarSystem.start()');
-          await mindarSystem.start(); // カメラ起動・トラッキング開始
-        } else {
-          console.warn('mindarSystem.start() が見つかりません。ライブラリ読み込み順やファイルを確認してください。');
-        }
-      } catch (e) {
-        console.error('mindar start error:', e);
-      }
-    });
-  </script>
+  <div class="hint">Hiroマーカーをカメラに向けてください</div>
 </body>
 </html>
 
