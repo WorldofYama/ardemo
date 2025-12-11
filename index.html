@@ -4,38 +4,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR.js Hiro Marker Test</title>
-
-  <!-- Three.js と AR.js (aframe版) のCDN -->
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ar-js@3.4.3/aframe/build/aframe-ar.js"></script>
-
+  <title>AR.js Hiro Marker (Local JS)</title>
+  <!-- ローカル保存したJSを相対パスで参照 -->
+  <script src="./vendor/aframe-v1.7.1.min.js"></script>
+  <script src="./vendor/aframe-ar.js"></script>
   <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; }
+    html,body { margin:0; padding:0; height:100%; overflow:hidden; }
     .hint { position:fixed; left:8px; bottom:8px; background:#0008; color:#fff; padding:8px 10px; border-radius:6px; font-size:14px; }
   </style>
 </head>
 <body>
-  <!-- カメラへのアクセス許可が必要。HTTPS必須 -->
   <a-scene
     embedded
     arjs="sourceType: webcam; debugUIEnabled: false;"
     vr-mode-ui="enabled: false"
     renderer="logarithmicDepthBuffer: true"
   >
-    <!-- Hiro マーカー（プリセット） -->
+    <!-- Hiroマーカーで表示する3Dオブジェクト -->
     <a-marker preset="hiro">
-      <!-- マーカー上に表示する 3D オブジェクト例 -->
       <a-box position="0 0.5 0" rotation="0 45 0" color="#4CC3D9" depth="1" height="1" width="1"></a-box>
       <a-sphere position="0 1.5 0" radius="0.35" color="#EF2D5E"></a-sphere>
-      <a-text value="Hello AR.js" position="-0.8 0.1 0" rotation="-90 0 0" color="#FFF"></a-text>
+      <a-text value="Local JS OK" position="-0.8 0.1 0" rotation="-90 0 0" color="#FFF"></a-text>
     </a-marker>
-
-    <!-- カメラ設定 -->
     <a-entity camera></a-entity>
   </a-scene>
-
   <div class="hint">Hiroマーカーをカメラに向けてください</div>
 </body>
 </html>
-
