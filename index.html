@@ -1,13 +1,19 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>AR.js Hiro Marker (Edge + GitHub Pages, No CDN)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style> body { margin: 0; overflow: hidden; } </style>
-  <!-- 外部CDN禁止：自前ライブラリのみ -->
-  <script src="./libs/three.min.js"></script>
-  <script src="./libs/ar.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AR.js Hiro Marker Demo (Edge + GitHub Pages)</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
+
+  <!-- three.js（UMD版。例: r128）-->
+  ./libs/three.min.js</script>
+
+  <!-- AR.js（three.js版ビルド：THREEx.* を含む）-->
+  ./libs/ar.js</script>
 </head>
 <body>
 <script>
@@ -20,20 +26,22 @@
   renderer.setClearColor(0x000000, 0);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.domElement.style.position = 'absolute';
-  renderer.domElement.style.top = '0px';
-  renderer.domElement.style.left = '0px';
+  renderer.domElement.style.top = '0';
+  renderer.domElement.style.left = '0';
   document.body.appendChild(renderer.domElement);
 
   // ===== AR.js ソース（Webカメラ） =====
   const arSource = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
-  function onResize(){
+
+  function onResize() {
     arSource.onResizeElement();
     arSource.copyElementSizeTo(renderer.domElement);
     if (arContext && arContext.arController) {
       arSource.copyElementSizeTo(arContext.arController.canvas);
     }
   }
-  arSource.init(function(){ onResize(); });
+
+  arSource.init(() => onResize());
   window.addEventListener('resize', onResize);
 
   // ===== AR.js コンテキスト =====
@@ -42,34 +50,35 @@
     detectionMode: 'mono'
   });
 
-  arContext.init(function(){
-    // Three.js カメラに投影行列をコピー
+  arContext.init(() => {
+    // Three.js カメラに投影行列を適用
     camera.projectionMatrix.copy(arContext.getProjectionMatrix());
   });
 
   // ===== マーカー（hiro） =====
   const markerRoot = new THREE.Group();
   scene.add(markerRoot);
+
   const markerControls = new THREEx.ArMarkerControls(arContext, markerRoot, {
     type: 'pattern',
-    patternUrl: './assets/patt.hiro'
+    patternUrl: './assets/patt.hiro' // 相対パスで確実に
   });
 
-  // ===== オブジェクト（三角錐） =====
-  const geometry = new THREE.ConeGeometry(0.5, 1, 4);
+  // ===== 表示オブジェクト（三角錐） =====
+  const geometry = new THREE.ConeGeometry(0.5, 1, 4); // 半径0.5, 高さ1, 4角錐
   const material = new THREE.MeshNormalMaterial();
   const cone = new THREE.Mesh(geometry, material);
   cone.position.y = 0.5; // マーカー面から少し上げる
   markerRoot.add(cone);
 
   // ===== レンダリングループ =====
-  function animate(){
+  (function animate(){
     requestAnimationFrame(animate);
     if (arSource.ready) arContext.update(arSource.domElement);
     cone.rotation.y += 0.01;
     renderer.render(scene, camera);
-  }
-  animate();
+  })();
 </script>
 </body>
 </html>
+
