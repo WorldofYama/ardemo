@@ -8,7 +8,21 @@
   <style>html,body{height:100%;margin:0}body{overflow:hidden;background:#000}</style>
 </head>
 <body>
-  <!-- バンドル済みJSだけを読む（※ この行は単独のタグ。中に入れない） -->
-  ./dist/app.js</script>
+  <!-- ここでは ./dist/app.js</script> を直接は書かない -->
+  <script>
+    (function(){
+      // ① 動的に <script> 要素を生成
+      var s = document.createElement('script');
+      s.src = './dist/app.js';      // 読み込みたいファイル（バンドル済みJS）
+      s.async = false;              // 取り違え防止のため同期的に（念のため）
+
+      // ② 読み込み成功/失敗のログ（デバッグ用）
+      s.onload = function(){ console.log('app.js loaded'); };
+      s.onerror = function(){ console.error('app.js failed to load'); };
+
+      // ③ DOMに追加（これでブラウザが実際に読み込む）
+      document.body.appendChild(s);
+    })();
+  </script>
 </body>
 </html>
