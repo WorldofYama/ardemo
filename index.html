@@ -3,20 +3,59 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>MindAR画像ターゲットARデモ（自前ホスト）</title>
-  <script src="./libs/aframe.min.js"</script>
+  <title>MindAR画像ターゲットARデモ（自前ホスト／診断付き）</title>
+
+  <!-- ローカルJS（順番はA-Frame → MindAR） -->
+  <script src="./libs/aframe.min.js"></script>
   <script src="./libs/mindar-image-aframe.prod.js"</script>
+
   <style>
     body { margin: 0; background: #000; }
     a-scene { width: 100vw; height: 100vh; }
-    #start { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.85); }
+    #start { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.85); z-index: 10; }
     #start button { padding: 12px 20px; font-size: 16px; }
   </style>
+
+  <!-- 診断用ログ -->
+  <script>
+    // ライブラリ読み込み確認
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('A-Frame loaded?', !!window.AFRAME);
+      console.log('MindAR A-Frame component exists?', !!AFRAME?.components['mindar-image-target']);
+      console.log('Navigator mediaDevices?', !!navigator.mediaDevices);
+
+      // カメラAPIの利用可否（失敗なら原因が分かる）
+      if (navigator.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            console.log('[diag] getUserMedia: OK（テスト用）');
+            stream.getTracks().forEach(t => t.stop()); // 診断のみ。すぐ停止。
+          })
+          .catch(err => {
+            console.error('[diag] getUserMedia error:', err && (err.name + ': ' + err.message));
+          });
+      } else {
+        console.error('[diag] mediaDevices.getUserMedia が未対応または権限でブロック');
+      }
+    });
+
+    // MindARのイベント購読（scene初期化・準備・開始）
+    document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('mindar-image-initialized', () => console.log('[mindar] initialized'));
+      document.addEventListener('mindar-image-ready', () => console.log('[mindar] ready'));
+      document.addEventListener('mindar-image-start', () => console.log('[mindar] start'));
+      document.addEventListener('mindar-image-error', (e) => console.error('[mindar] error', e?.detail));
+    });
+  </script>
 </head>
 <body>
-  <div id="start"><button onclick="document.getElementById('start').style.display='none'">カメラを開始</button></div>
+  <!-- 開始ボタン（iOS安定化用） -->
+  <div id="start">
+    <button id="startBtn">カメラを開始</button>
+  </div>
 
-  <a-scene mindar-image="imageTargetSrc: ./targets.mind;"
+  <a-scene id="scene"
+           mindar-image="imageTargetSrc: ./targets.mind;"
            vr-mode-ui="enabled: false"
            device-orientation-permission-ui="enabled: false">
     <a-camera look-controls="enabled: false"></a-camera>
@@ -25,5 +64,22 @@
       <a-box color="#4CC3D9" position="0 0 0.05" depth="0.1" height="0.1" width="0.1"></a-box>
     </a-entity>
   </a-scene>
+
+  <script>
+    // 開始ボタンでオーバーレイを閉じるのみ（MindARはsceneがロード済みなら自身でカメラを起動）
+    document.getElementById('startBtn').addEventListener('click', () => {
+      document.getElementById('start').style.display = 'none';
+      console.log('[ui] start button clicked');
+    });
+
+    // 追加診断：targets.mindの取得を明示的に行い、Network/Consoleで確認
+    fetch('./targets.mind')
+      .then(r => {
+        console.log('[diag] targets.mind fetch:', r.status, r.ok ? 'OK' : 'NG');
+        return r.arrayBuffer();
+      })
+      .catch(e => console.error('[diag] targets.mind fetch error:', e));
+  </script>
 </body>
 </html>
+
