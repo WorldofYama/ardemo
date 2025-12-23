@@ -74,49 +74,27 @@
       </a-entity>
     </a-marker>
 
-    <!-- =========================
-         3) warning.patt ：警告（三角＋黒「！」）
-         ・黄色半透明の三角形に厚み（立体）
-         ・黒「！」は半透明で内部に配置
-         ・外周に薄い縁（ワイヤーフレーム）を追加
-       ========================= -->
+
+    <!-- 🔶 warning マーカー（自作の .patt） -->
     <a-marker type="pattern" url="./assets/warning.patt">
-      <!-- ベース位置：x=0.15, z=0.15 -->
-      <a-entity position="0.15 0 0.15">
-        <!-- 三角の立体：tetrahedron を厚み感が出るようにスケール調整 -->
-        <a-entity position="0 0.55 0" scale="1.05 1.25 0.65">
-          <!-- 本体（黄色半透明） -->
-          <a-entity geometry="primitive: tetrahedron; radius: 0.70"
-                    material="color:#FFCC00; opacity:0.55; transparent:true; roughness:0.9; metalness:0.05">
-          </a-entity>
-          <!-- ふち（枠っぽさ）：少し大きいワイヤーフレームを重ねる -->
-          <a-entity geometry="primitive: tetrahedron; radius: 0.73"
-                    material="color:#C49000; opacity:0.35; transparent:true; wireframe:true">
-          </a-entity>
-        </a-entity>
-
-        <!-- 「！」（半透明黒）。少し前寄りに配置して見えやすく -->
-        <a-text value="!" position="-0.08 0.60 0.14" rotation="-90 0 0"
-                color="#000" width="1.5"
-                material="opacity:0.55; transparent:true">
-        </a-text>
-
-        <!-- 台座の影（薄い円）任意 -->
-        <a-circle position="0 0.02 0" radius="0.65"
-                  material="color:#333; opacity:0.22; transparent:true"></a-circle>
-
-        <a-text value="Warning" position="-0.85 0.05 0" rotation="-90 0 0" color="#FFF"></a-text>
+      <!-- ここに「自作モデル」を表示（例：glTF/GLB を推奨）-->
+      <a-entity
+        gltf-model="url(./assets/Project Name.gltf)"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.2 0.2 0.2">
       </a-entity>
+
+      <!-- 追加：ライトが欲しい場合 -->
+      <a-entity light="type: directional; intensity: 0.8" position="0.5 1 0.5"></a-entity>
+      <a-entity light="type: ambient; intensity: 0.4"></a-entity>
     </a-marker>
+
 
     <!-- カメラ -->
     <a-entity camera></a-entity>
   </a-scene>
 
-  <div class="hint">
-    ・矢印は Z 軸に垂直（XY平面）／X と Z に 0.15m オフセット。<br/>
-    ・キューブ A/B/C は重ならない配置で、それぞれラベル表示。<br/>
-    ・警告は黄色半透明＋枠＋内部に半透明黒「！」で厚みのある三角形。
-  </div>
+
 </body>
 </html>
